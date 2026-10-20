@@ -1,0 +1,22 @@
+[theme]
+base = "dark"
+primaryColor = "#D4A94F"
+backgroundColor = "#0E1420"
+secondaryBackgroundColor = "#161F31"
+textColor = "#E6E9F0"
+linkColor = "#8AB4F8"
+borderColor = "#2A3650"
+baseRadius = "large"
+buttonRadius = "full"
+font = "sans-serif"
+codeFont = "monospace"
+
+[theme.sidebar]
+backgroundColor = "#0A0F19"
+secondaryBackgroundColor = "#141C2D"
+
+[client]
+toolbarMode = "minimal"
+
+[browser]
+gatherUsageStats = false

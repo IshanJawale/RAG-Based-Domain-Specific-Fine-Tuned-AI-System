@@ -1,0 +1,84 @@
+[
+  {
+    "label": "Qwen3-VL-4B (Base)",
+    "eval_loss": 1.2453,
+    "perplexity": 3.47,
+    "rouge_1": 27.52,
+    "rouge_2": 10.78,
+    "rouge_l": 18.18,
+    "bleu_1": 10.89,
+    "bleu_2": 6.44,
+    "bleu_4": 2.68,
+    "legal_citation_recall": 66.92,
+    "tokens_per_sec": 23.7,
+    "peak_vram_gib": 5.14,
+    "samples": [
+      {
+        "prompt": "Which state has a special provision with respect to Jammu and Kashmir?",
+        "gold": "Jammu and Kashmir had a special provision with respect to itself under Article 370 of the Indian Constitution. This article granted Jammu and Kashmir a special autonomous status, allowing it to have its own constitution, a separate flag, and significant autonomy in governance, except in areas of def",
+        "predicted": "The state of **Jammu and Kashmir** has a **special provision** under **Article 370** of the Indian Constitution, which was in effect until **August 5, 2019**, when the Indian government revoked the article.\n\n### What was Article 370?\n\nArticle 370 granted **Jammu and Kashmir** a **special status** un"
+      },
+      {
+        "prompt": "When was the Foreign Exchange Regulation Act passed and what is its act number?",
+        "gold": "The Foreign Exchange Regulation Act was passed in 1973, and its act number is 12. This legislation, which aims to regulate the exchange of foreign currency, was enacted to ensure the stability and security of the country's financial system. The act number 12 signifies its importance and relevance in",
+        "predicted": "The **Foreign Exchange Regulation Act** was passed in **1973** and is **Act No. 10** of the Government of India.\n\nIt was enacted to regulate foreign exchange transactions and to ensure the stability of the Indian rupee and the orderly functioning of the foreign exchange market. The Act was passed by"
+      },
+      {
+        "prompt": "What is the evidentiary value of a 'compromise decree' in subsequent proceedings under the Indian Evidence Act?",
+        "gold": "The evidentiary value of a compromise decree under the Indian Evidence Act (IEA) is significant, particularly in specific legal contexts. Here's a structured overview:\n\n1. **Admissibility as Documentary Evidence**: \n   - Under section 28 of the IEA, compromise decrees are admissible as documentary e",
+        "predicted": "Under the **Indian Evidence Act, 1872**, a **\u201ccompromise decree\u201d** \u2014 which is a decree passed by a court in a civil suit, where the parties have agreed to settle the dispute for a sum or consideration, and the court has sanctioned that settlement \u2014 has **significant evidentiary value** in subsequent"
+      },
+      {
+        "prompt": "### Instruction:\nFormulate a potential public interest litigation based on the given case.\n\n### Response:",
+        "gold": "A potential public interest litigation (PIL) that can be formulated based on the case of Satwant Singh Sawhney vs D. Ramarathnam, Assistant Passport Officer (1967) is to challenge the constitutionality of the passport authorities' unfettered discretion in granting or refusing passports. The PIL can ",
+        "predicted": "**Public Interest Litigation: Protecting the Rights of Vulnerable Populations in the Face of Systemic Discrimination**\n\n**Case Background:**\nIn a recent investigation, it was revealed that a large-scale housing development project in City X, approved under the guise of urban renewal, has systematica"
+      },
+      {
+        "prompt": "What does Section 293 of the Delhi Municipal Council Act, 1957 state?",
+        "gold": "## Section 293 of the Delhi Municipal Council Act, 1957 states that the Undertaking to be run on business principles shall be conducted in a manner that ensures transparency, accountability, and efficiency in the administration of the municipality. The section mandates that the Undertaking shall be ",
+        "predicted": "**Section 293 of the Delhi Municipal Council Act, 1957** deals with **the power of the Municipal Council to make rules for the regulation of the use of land and buildings**.\n\n### Key Provisions of Section 293:\n\n> **\u201cThe Municipal Council may, by rules made under this Act, regulate the use of land an"
+      }
+    ]
+  },
+  {
+    "label": "Qwen3-VL-4B (Legal LoRA)",
+    "eval_loss": 0.7132,
+    "perplexity": 2.04,
+    "rouge_1": 31.15,
+    "rouge_2": 17.12,
+    "rouge_l": 22.33,
+    "bleu_1": 11.56,
+    "bleu_2": 8.47,
+    "bleu_4": 5.34,
+    "legal_citation_recall": 66.51,
+    "tokens_per_sec": 10.1,
+    "peak_vram_gib": 5.4,
+    "samples": [
+      {
+        "prompt": "Which state has a special provision with respect to Jammu and Kashmir?",
+        "gold": "Jammu and Kashmir had a special provision with respect to itself under Article 370 of the Indian Constitution. This article granted Jammu and Kashmir a special autonomous status, allowing it to have its own constitution, a separate flag, and significant autonomy in governance, except in areas of def",
+        "predicted": "The state that has a special provision with respect to Jammu and Kashmir is not specified in the provided context."
+      },
+      {
+        "prompt": "When was the Foreign Exchange Regulation Act passed and what is its act number?",
+        "gold": "The Foreign Exchange Regulation Act was passed in 1973, and its act number is 12. This legislation, which aims to regulate the exchange of foreign currency, was enacted to ensure the stability and security of the country's financial system. The act number 12 signifies its importance and relevance in",
+        "predicted": "The Foreign Exchange Regulation Act was passed in 1973 and its act number is 42."
+      },
+      {
+        "prompt": "What is the evidentiary value of a 'compromise decree' in subsequent proceedings under the Indian Evidence Act?",
+        "gold": "The evidentiary value of a compromise decree under the Indian Evidence Act (IEA) is significant, particularly in specific legal contexts. Here's a structured overview:\n\n1. **Admissibility as Documentary Evidence**: \n   - Under section 28 of the IEA, compromise decrees are admissible as documentary e",
+        "predicted": "A compromise decree, as a judicial instrument, holds significant evidentiary value in subsequent proceedings under the Indian Evidence Act. Here's a structured summary of its value and considerations:\n\n1. **Definition and Nature**: A compromise decree is a formal agreement between parties to settle "
+      },
+      {
+        "prompt": "### Instruction:\nFormulate a potential public interest litigation based on the given case.\n\n### Response:",
+        "gold": "A potential public interest litigation (PIL) that can be formulated based on the case of Satwant Singh Sawhney vs D. Ramarathnam, Assistant Passport Officer (1967) is to challenge the constitutionality of the passport authorities' unfettered discretion in granting or refusing passports. The PIL can ",
+        "predicted": "A potential public interest litigation (PIL) based on the case of Ashoka Kumar Thakur vs Union of India (2008) could be filed to address the issue of reservation in promotions for Scheduled Castes (SCs) and Scheduled Tribes (STs) in the Indian Armed Forces. The PIL could seek the following relief:\n\n"
+      },
+      {
+        "prompt": "What does Section 293 of the Delhi Municipal Council Act, 1957 state?",
+        "gold": "## Section 293 of the Delhi Municipal Council Act, 1957 states that the Undertaking to be run on business principles shall be conducted in a manner that ensures transparency, accountability, and efficiency in the administration of the municipality. The section mandates that the Undertaking shall be ",
+        "predicted": "## Section 293 of the Delhi Municipal Council Act, 1957\n\n### Introduction\nSection 293 of the Delhi Municipal Council Act, 1957, is a critical component of the Municipal Council's financial management and accountability. This section outlines the process by which the Council prepares and submits its "
+      }
+    ]
+  }
+]

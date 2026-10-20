@@ -1,0 +1,254 @@
+[
+  {
+    "label": "Qwen3-VL-4B (Base)",
+    "type": "HPC GPU (bf16)",
+    "eval_loss": 1.3442,
+    "perplexity": 3.84,
+    "rouge_1": 27.34,
+    "rouge_2": 9.33,
+    "rouge_l": 16.86,
+    "bleu_1": 11.66,
+    "bleu_2": 6.63,
+    "bleu_4": 2.74,
+    "citation_recall": 81.11,
+    "citation_precision": 77.97,
+    "citation_f1": 75.97,
+    "legal_terminology_density": 0.82,
+    "tokens_per_sec": 63.2,
+    "avg_latency_sec": 3.16,
+    "peak_vram_gib": 10.7,
+    "samples": [
+      {
+        "prompt": "When was the Foreign Exchange Regulation Act passed and what is its act number?",
+        "gold": "The Foreign Exchange Regulation Act was passed in 1973, and its act number is 12. This legislation, which aims to regulate the exchange of foreign currency, was enacted to ensure the stability and security of the country's financial system. The act number 12 signifies its importance and relevance in",
+        "predicted": "The **Foreign Exchange Regulation Act (FERA)** was passed in the year **1973**.\n\nIts **act number** is **Act No. 2 of 1973**.\n\nThis legislation was enacted by the Government of India to regulate foreign exchange transactions, control the inflow and outflow of foreign currency, and ensure that foreig"
+      },
+      {
+        "prompt": "What is the evidentiary value of a 'compromise decree' in subsequent proceedings under the Indian Evidence Act?",
+        "gold": "The evidentiary value of a compromise decree under the Indian Evidence Act (IEA) is significant, particularly in specific legal contexts. Here's a structured overview:\n\n1. **Admissibility as Documentary Evidence**: \n   - Under section 28 of the IEA, compromise decrees are admissible as documentary e",
+        "predicted": "Under the **Indian Evidence Act, 1872**, a **\u201ccompromise decree\u201d** \u2014 which refers to a court order that settles a dispute between parties through mutual agreement (often with the court\u2019s approval) \u2014 has **significant evidentiary value** in subsequent proceedings. However, its admissibility and weigh"
+      },
+      {
+        "prompt": "What does Section 293 of the Delhi Municipal Council Act, 1957 state?",
+        "gold": "## Section 293 of the Delhi Municipal Council Act, 1957 states that the Undertaking to be run on business principles shall be conducted in a manner that ensures transparency, accountability, and efficiency in the administration of the municipality. The section mandates that the Undertaking shall be ",
+        "predicted": "**Section 293 of the Delhi Municipal Corporation Act, 1957** (not \u201cDelhi Municipal Council Act\u201d, which is outdated \u2014 the current body is called the *Delhi Municipal Corporation*, governed by the *Delhi Municipal Corporation Act, 1957* as amended) **provides for the power to remove or suspend a membe"
+      }
+    ]
+  },
+  {
+    "label": "Qwen3-VL-4B (1-Epoch LoRA)",
+    "type": "HPC GPU (bf16)",
+    "eval_loss": 0.7702,
+    "perplexity": 2.16,
+    "rouge_1": 32.08,
+    "rouge_2": 14.85,
+    "rouge_l": 21.35,
+    "bleu_1": 12.26,
+    "bleu_2": 8.14,
+    "bleu_4": 4.57,
+    "citation_recall": 78.34,
+    "citation_precision": 85.42,
+    "citation_f1": 79.94,
+    "legal_terminology_density": 0.45,
+    "tokens_per_sec": 33.0,
+    "avg_latency_sec": 5.48,
+    "peak_vram_gib": 10.94,
+    "samples": [
+      {
+        "prompt": "When was the Foreign Exchange Regulation Act passed and what is its act number?",
+        "gold": "The Foreign Exchange Regulation Act was passed in 1973, and its act number is 12. This legislation, which aims to regulate the exchange of foreign currency, was enacted to ensure the stability and security of the country's financial system. The act number 12 signifies its importance and relevance in",
+        "predicted": "The Foreign Exchange Regulation Act was passed in 1973, with an act number of 42."
+      },
+      {
+        "prompt": "What is the evidentiary value of a 'compromise decree' in subsequent proceedings under the Indian Evidence Act?",
+        "gold": "The evidentiary value of a compromise decree under the Indian Evidence Act (IEA) is significant, particularly in specific legal contexts. Here's a structured overview:\n\n1. **Admissibility as Documentary Evidence**: \n   - Under section 28 of the IEA, compromise decrees are admissible as documentary e",
+        "predicted": "**Answer:**\n\nUnder the Indian Evidence Act, 1872, a compromise decree obtained through mutual agreement between parties has significant evidentiary weight. Here's a structured summary:\n\n1. **Definition and Nature**: A compromise decree is an agreement reached by both parties to settle their dispute "
+      },
+      {
+        "prompt": "What does Section 293 of the Delhi Municipal Council Act, 1957 state?",
+        "gold": "## Section 293 of the Delhi Municipal Council Act, 1957 states that the Undertaking to be run on business principles shall be conducted in a manner that ensures transparency, accountability, and efficiency in the administration of the municipality. The section mandates that the Undertaking shall be ",
+        "predicted": "## Title: Section 293 of the Delhi Municipal Council Act, 1957\n\n### Introduction\nSection 293 of the Delhi Municipal Council Act, 1957, is a critical provision that outlines the powers and responsibilities of the Commissioner in relation to the enforcement of regulations. This section grants the Comm"
+      }
+    ]
+  },
+  {
+    "label": "Qwen3-VL-4B (2-Epoch LoRA)",
+    "type": "HPC GPU (bf16)",
+    "eval_loss": 0.7592,
+    "perplexity": 2.14,
+    "rouge_1": 31.89,
+    "rouge_2": 14.54,
+    "rouge_l": 20.79,
+    "bleu_1": 12.11,
+    "bleu_2": 7.93,
+    "bleu_4": 4.34,
+    "citation_recall": 78.52,
+    "citation_precision": 80.15,
+    "citation_f1": 76.6,
+    "legal_terminology_density": 0.68,
+    "tokens_per_sec": 32.5,
+    "avg_latency_sec": 5.62,
+    "peak_vram_gib": 10.94,
+    "samples": [
+      {
+        "prompt": "When was the Foreign Exchange Regulation Act passed and what is its act number?",
+        "gold": "The Foreign Exchange Regulation Act was passed in 1973, and its act number is 12. This legislation, which aims to regulate the exchange of foreign currency, was enacted to ensure the stability and security of the country's financial system. The act number 12 signifies its importance and relevance in",
+        "predicted": "The Foreign Exchange Regulation Act was passed in 1973 as Act No. 46 of 1973."
+      },
+      {
+        "prompt": "What is the evidentiary value of a 'compromise decree' in subsequent proceedings under the Indian Evidence Act?",
+        "gold": "The evidentiary value of a compromise decree under the Indian Evidence Act (IEA) is significant, particularly in specific legal contexts. Here's a structured overview:\n\n1. **Admissibility as Documentary Evidence**: \n   - Under section 28 of the IEA, compromise decrees are admissible as documentary e",
+        "predicted": "The evidentiary value of a compromise decree in subsequent proceedings under the Indian Evidence Act can be summarized as follows:\n\n1. **Admissibility**: A compromise decree, once legally binding and enforceable, can be admitted as evidence if it relates to matters that were previously litigated bet"
+      },
+      {
+        "prompt": "What does Section 293 of the Delhi Municipal Council Act, 1957 state?",
+        "gold": "## Section 293 of the Delhi Municipal Council Act, 1957 states that the Undertaking to be run on business principles shall be conducted in a manner that ensures transparency, accountability, and efficiency in the administration of the municipality. The section mandates that the Undertaking shall be ",
+        "predicted": "##Section 293 of the Delhi Municipal Council Act, 1957\n\n### Introduction\nSection 293 of the Delhi Municipal Council Act, 1957, is a critical provision that outlines the powers and responsibilities of the Commissioner in relation to public health measures. This section grants the Commissioner signifi"
+      }
+    ]
+  },
+  {
+    "label": "Qwen3-VL-4B (4-Epoch LoRA)",
+    "type": "HPC GPU (bf16)",
+    "eval_loss": 0.8011,
+    "perplexity": 2.23,
+    "rouge_1": 31.89,
+    "rouge_2": 14.57,
+    "rouge_l": 20.74,
+    "bleu_1": 12.26,
+    "bleu_2": 8.1,
+    "bleu_4": 4.42,
+    "citation_recall": 78.71,
+    "citation_precision": 81.42,
+    "citation_f1": 76.95,
+    "legal_terminology_density": 0.76,
+    "tokens_per_sec": 32.1,
+    "avg_latency_sec": 5.64,
+    "peak_vram_gib": 10.94,
+    "samples": [
+      {
+        "prompt": "When was the Foreign Exchange Regulation Act passed and what is its act number?",
+        "gold": "The Foreign Exchange Regulation Act was passed in 1973, and its act number is 12. This legislation, which aims to regulate the exchange of foreign currency, was enacted to ensure the stability and security of the country's financial system. The act number 12 signifies its importance and relevance in",
+        "predicted": "The Foreign Exchange Regulation Act was passed in 1973, and its act number is 42."
+      },
+      {
+        "prompt": "What is the evidentiary value of a 'compromise decree' in subsequent proceedings under the Indian Evidence Act?",
+        "gold": "The evidentiary value of a compromise decree under the Indian Evidence Act (IEA) is significant, particularly in specific legal contexts. Here's a structured overview:\n\n1. **Admissibility as Documentary Evidence**: \n   - Under section 28 of the IEA, compromise decrees are admissible as documentary e",
+        "predicted": "**Answer:**\n\nA compromise decree, as defined by Section 120 of the Indian Evidence Act (IEA), is an agreement between parties to settle their dispute without going to trial. This type of settlement can be used as evidence in subsequent legal proceedings, but its admissibility and impact are governed"
+      },
+      {
+        "prompt": "What does Section 293 of the Delhi Municipal Council Act, 1957 state?",
+        "gold": "## Section 293 of the Delhi Municipal Council Act, 1957 states that the Undertaking to be run on business principles shall be conducted in a manner that ensures transparency, accountability, and efficiency in the administration of the municipality. The section mandates that the Undertaking shall be ",
+        "predicted": "## Introduction\n\nSection 293 of the Delhi Municipal Council Act, 1957, is a critical provision that outlines the process for recovering arrears of taxes and fees from individuals who fail to pay them. This section is crucial for ensuring that the municipal council can effectively manage its financia"
+      }
+    ]
+  },
+  {
+    "label": "Qwen3-VL-8B (Base)",
+    "type": "HPC GPU (bf16)",
+    "eval_loss": 1.2884,
+    "perplexity": 3.63,
+    "rouge_1": 27.4,
+    "rouge_2": 9.52,
+    "rouge_l": 16.85,
+    "bleu_1": 11.51,
+    "bleu_2": 6.7,
+    "bleu_4": 2.9,
+    "citation_recall": 80.17,
+    "citation_precision": 78.53,
+    "citation_f1": 76.19,
+    "legal_terminology_density": 0.74,
+    "tokens_per_sec": 41.1,
+    "avg_latency_sec": 4.84,
+    "peak_vram_gib": 18.77,
+    "samples": [
+      {
+        "prompt": "When was the Foreign Exchange Regulation Act passed and what is its act number?",
+        "gold": "The Foreign Exchange Regulation Act was passed in 1973, and its act number is 12. This legislation, which aims to regulate the exchange of foreign currency, was enacted to ensure the stability and security of the country's financial system. The act number 12 signifies its importance and relevance in",
+        "predicted": "The **Foreign Exchange Regulation Act (FERA)** was passed in **1973**. Its official act number is:\n\n> **Act No. 2 of 1973**\n\nThis legislation was enacted by the Government of India to regulate foreign exchange transactions, control capital flows, and manage foreign investments during a period of eco"
+      },
+      {
+        "prompt": "What is the evidentiary value of a 'compromise decree' in subsequent proceedings under the Indian Evidence Act?",
+        "gold": "The evidentiary value of a compromise decree under the Indian Evidence Act (IEA) is significant, particularly in specific legal contexts. Here's a structured overview:\n\n1. **Admissibility as Documentary Evidence**: \n   - Under section 28 of the IEA, compromise decrees are admissible as documentary e",
+        "predicted": "Under the **Indian Evidence Act, 1872**, a **\u2018compromise decree\u2019** \u2014 which is an order passed by a court when parties to a suit voluntarily agree to settle their dispute without going to trial \u2014 has specific evidentiary value in **subsequent proceedings**. Its admissibility and probative force are g"
+      },
+      {
+        "prompt": "What does Section 293 of the Delhi Municipal Council Act, 1957 state?",
+        "gold": "## Section 293 of the Delhi Municipal Council Act, 1957 states that the Undertaking to be run on business principles shall be conducted in a manner that ensures transparency, accountability, and efficiency in the administration of the municipality. The section mandates that the Undertaking shall be ",
+        "predicted": "**Section 293 of the Delhi Municipal Corporation Act, 1957 (not \u201cDelhi Municipal Council Act\u201d \u2014 note: the correct name is *Delhi Municipal Corporation Act, 1957*)** deals with **the power to make bye-laws for regulating the use and occupation of premises in connection with public health, safety, con"
+      }
+    ]
+  },
+  {
+    "label": "Qwen3-VL-8B (Fine-Tuned)",
+    "type": "HPC GPU (bf16)",
+    "eval_loss": 0.7214,
+    "perplexity": 2.06,
+    "rouge_1": 31.33,
+    "rouge_2": 13.98,
+    "rouge_l": 20.54,
+    "bleu_1": 12.04,
+    "bleu_2": 7.68,
+    "bleu_4": 4.11,
+    "citation_recall": 74.51,
+    "citation_precision": 79.17,
+    "citation_f1": 74.6,
+    "legal_terminology_density": 0.6,
+    "tokens_per_sec": 32.5,
+    "avg_latency_sec": 5.55,
+    "peak_vram_gib": 19.09,
+    "samples": [
+      {
+        "prompt": "When was the Foreign Exchange Regulation Act passed and what is its act number?",
+        "gold": "The Foreign Exchange Regulation Act was passed in 1973, and its act number is 12. This legislation, which aims to regulate the exchange of foreign currency, was enacted to ensure the stability and security of the country's financial system. The act number 12 signifies its importance and relevance in",
+        "predicted": "The Foreign Exchange Regulation Act was passed in 1973 and its act number is 14 of 1973."
+      },
+      {
+        "prompt": "What is the evidentiary value of a 'compromise decree' in subsequent proceedings under the Indian Evidence Act?",
+        "gold": "The evidentiary value of a compromise decree under the Indian Evidence Act (IEA) is significant, particularly in specific legal contexts. Here's a structured overview:\n\n1. **Admissibility as Documentary Evidence**: \n   - Under section 28 of the IEA, compromise decrees are admissible as documentary e",
+        "predicted": "A compromise decree, once obtained through mutual agreement and court approval, holds significant evidentiary weight in subsequent legal proceedings. Here's a structured summary of its implications:\n\n1. **Nature of Compromise Decree**: A compromise decree is an enforceable order resulting from a set"
+      },
+      {
+        "prompt": "What does Section 293 of the Delhi Municipal Council Act, 1957 state?",
+        "gold": "## Section 293 of the Delhi Municipal Council Act, 1957 states that the Undertaking to be run on business principles shall be conducted in a manner that ensures transparency, accountability, and efficiency in the administration of the municipality. The section mandates that the Undertaking shall be ",
+        "predicted": "## Title: Section 293 of the Delhi Municipal Council Act, 1957\n\n### Introduction\nSection 293 of the Delhi Municipal Council Act, 1957, is a critical provision that outlines the powers and responsibilities of the Commissioner in relation to public health and sanitation. This section grants the Commis"
+      }
+    ]
+  },
+  {
+    "label": "Gemini 3.7 Flash",
+    "type": "Cloud API (Zero VRAM)",
+    "eval_loss": "N/A (API)",
+    "perplexity": "N/A (API)",
+    "rouge_1": 28.18,
+    "rouge_2": 10.91,
+    "rouge_l": 17.39,
+    "bleu_1": 10.94,
+    "bleu_2": 6.57,
+    "bleu_4": 2.87,
+    "citation_recall": 85.06,
+    "citation_precision": 79.97,
+    "citation_f1": 79.18,
+    "legal_terminology_density": 0.87,
+    "tokens_per_sec": 41.4,
+    "avg_latency_sec": 3.97,
+    "peak_vram_gib": 0.0,
+    "samples": [
+      {
+        "prompt": "When was the Foreign Exchange Regulation Act passed and what is its act number?",
+        "gold": "The Foreign Exchange Regulation Act was passed in 1973, and its act number is 12. This legislation, which aims to regulate the exchange of foreign currency, was enacted to ensure the stability and security of the country's financial system. The act number 12 signifies its importance and relevance in",
+        "predicted": "The **Foreign Exchange Regulation Act (FERA)** was passed by the Parliament of India on **September 19, 1973** (and came into force on January 1, 1974). \n\nIts official act number is **Act No. 46 of 1973**. \n\n*(Note: FERA was later repealed and replaced by the Foreign Exchange Management Act (FEMA) i"
+      },
+      {
+        "prompt": "What is the evidentiary value of a 'compromise decree' in subsequent proceedings under the Indian Evidence Act?",
+        "gold": "The evidentiary value of a compromise decree under the Indian Evidence Act (IEA) is significant, particularly in specific legal contexts. Here's a structured overview:\n\n1. **Admissibility as Documentary Evidence**: \n   - Under section 28 of the IEA, compromise decrees are admissible as documentary e",
+        "predicted": "Under the Indian legal framework, a **compromise decree** (passed under Order XXIII, Rule 3 of the Code of Civil Procedure, 1908) is a decree based on an agreement or contract between the parties, with the seal of the court affixed to it. \n\nIts evidentiary value in subsequent proceedings under the *"
+      },
+      {
+        "prompt": "What does Section 293 of the Delhi Municipal Council Act, 1957 state?",
+        "gold": "## Section 293 of the Delhi Municipal Council Act, 1957 states that the Undertaking to be run on business principles shall be conducted in a manner that ensures transparency, accountability, and efficiency in the administration of the municipality. The section mandates that the Undertaking shall be ",
+        "predicted": "Under the **Delhi Municipal Corporation Act, 1957** (commonly referred to in relation to the MCD), **Section 293** deals with the **\"Prohibition of projection upon streets, etc.\"**\n\nHere is a summary of what the section states:\n\n### Key Provisions of Section 293:\n\n1. **Prohibition of Projections wit"
+      }
+    ]
+  }
+]

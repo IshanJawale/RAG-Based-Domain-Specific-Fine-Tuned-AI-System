@@ -1,0 +1,7 @@
+# torch is provided by the cluster module (module load python) - do NOT list it here.
+transformers>=4.57
+peft>=0.17
+accelerate>=1.0
+numpy
+tqdm
+tensorboard

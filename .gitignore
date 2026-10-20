@@ -1,0 +1,111 @@
+# ==============================================================================
+# Python & bytecode
+# ==============================================================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+build/
+dist/
+wheels/
+*.egg-info/
+*.egg
+.pytest_cache/
+.coverage
+htmlcov/
+
+# ==============================================================================
+# Virtual environments
+# ==============================================================================
+.venv/
+venv/
+env/
+
+# ==============================================================================
+# Secrets (keep .env.example tracked)
+# ==============================================================================
+.env
+.env.*
+!.env.example
+.streamlit/secrets.toml
+
+# ==============================================================================
+# Data: too big for GitHub (100 MB per-file limit). Code that builds/downloads
+# it stays tracked; see "Sharing data" in the README for where the data lives.
+# ==============================================================================
+# LanceDB vector store, ingestion progress, Acts chunks (~15 GB)
+/data/*
+!/data/README.md
+
+# Public Indian-legal-data-v3 dataset (re-downloadable from Hugging Face)
+/finetuning_data/
+
+# Fine-tuning train/val splits and synthetic-data intermediates
+/to_finetune/data/
+/finetune/data/
+
+# law dataset/: keep the download/extract scripts, drop the raw data
+/law dataset/*.jsonl
+/law dataset/*.pdf
+
+# Scratch / one-off large files in the repo root
+/filtered_data.txt
+/hc_file_no.txt
+/test/curated_extra.jsonl
+
+# Catch-all for large data formats anywhere
+*.parquet
+*.arrow
+*.lance
+*.pkl
+*.pickle
+*.joblib
+*.db
+*.sqlite
+*.sqlite3
+
+# ==============================================================================
+# Model weights and checkpoints (adapters are 170-330 MB each)
+# ==============================================================================
+/Models/
+/finetune/outputs/
+/to_finetune/outputs/
+*.bin
+*.pt
+*.pth
+*.safetensors
+*.onnx
+*.ckpt
+*.h5
+*.gguf
+
+# ==============================================================================
+# Generated output, logs, local state
+# ==============================================================================
+/generated_documents/
+/app/chat_history/
+/to_finetune/logs/
+/test/test_output.txt
+*.log
+*.tmp
+
+# ==============================================================================
+# Personal / course material
+# ==============================================================================
+/RECOVERED_CONVERSATION.md
+/Lab6_Instructions.pdf
+/script.md
+
+# ==============================================================================
+# IDEs, OS, notebooks
+# ==============================================================================
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+desktop.ini
+$RECYCLE.BIN/
+.ipynb_checkpoints/

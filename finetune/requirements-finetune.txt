@@ -1,0 +1,14 @@
+# Fine-tuning environment (install on the GPU box, NOT needed for the local app).
+# Install a CUDA build of torch first, e.g.:
+#   pip install torch --index-url https://download.pytorch.org/whl/cu128
+transformers>=4.57          # Qwen3-VL / Qwen3-MoE support
+peft>=0.17
+accelerate>=1.0
+tqdm
+numpy
+# --quant 4bit only:
+bitsandbytes>=0.45
+# optional, faster attention on H200 (build can take a while):
+#   pip install flash-attn --no-build-isolation
+# optional logging:
+tensorboard
