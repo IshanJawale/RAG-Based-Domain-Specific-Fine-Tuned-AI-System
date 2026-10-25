@@ -160,3 +160,8 @@ websockets==16.1.1
 lancedb>=0.17.0
 pebble>=5.0.0
 accelerate>=1.0.0
+
+# Required by the app but previously missing
+peft==0.21.2
+bitsandbytes==0.50.2
+python-docx==1.2.0

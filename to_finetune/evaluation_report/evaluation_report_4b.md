@@ -1,5 +1,7 @@
 # Local Benchmark: Qwen3-VL-4B (Base) vs Qwen3-VL-4B (Fine-Tuned Legal LoRA)
 
+> **Superseded pilot run.** This is an early evaluation on a smaller question set. The reference benchmark is the 100-question evaluation in `to_finetune/FINETUNING_INFO.md` (Section 8) and `evaluation_report.md`. Do not quote these numbers alongside it.
+
 **Evaluated on:** 30 held-out Indian Legal test questions (`val.jsonl`)
 **Hardware:** NVIDIA GeForce RTX 5060 Laptop GPU (4-bit NF4 Quantization)
 

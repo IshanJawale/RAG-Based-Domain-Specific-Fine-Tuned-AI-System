@@ -1,14 +1,22 @@
 """
 llm.py
 
-CPU-based local inference for Indian Legal RAG Assistant.
-Loads models directly into system RAM (32 GB) using bfloat16,
-completely avoiding GPU VRAM contention and bitsandbytes dispatch errors.
+Local inference for Indian Legal RAG Assistant.
+Local models run on llama.cpp's llama-server (tools/llama.cpp) from Q4_K_M GGUFs in models/gguf,
+fully on GPU. If those files are missing, or LOCAL_BACKEND=transformers, they load in-process
+with transformers instead (about 20x slower).
 """
 
+import atexit
 import gc
+import json
 import os
+import re
+import subprocess
+import tempfile
 import threading
+import time
+import urllib.request
 from pathlib import Path
 import torch
 from dotenv import load_dotenv
@@ -42,6 +50,102 @@ ADAPTER_PATHS = {
     "Qwen3-VL-4B-Legal (Fine-Tuned)": MODELS_DIR / "legal-lora-vl-4b-adapter",
     "Qwen3-VL-8B-Legal (Fine-Tuned)": MODELS_DIR / "legal-lora-vl-8b-adapter",
 }
+
+
+# Local models are served by llama-server from the GGUFs built by scripts/build_gguf.py.
+LOCAL_BACKEND = os.getenv("LOCAL_BACKEND", "llama-server")  # "transformers" forces the slow in-process path
+LLAMA_CTX = int(os.getenv("LLAMA_CTX", "8192"))  # keeps the KV cache small enough for an 8 GB GPU
+LLAMA_SERVER_EXE = BASE_DIR / "tools" / "llama.cpp" / ("llama-server.exe" if os.name == "nt" else "llama-server")
+LLAMA_SERVER_PORT = int(os.getenv("LLAMA_SERVER_PORT", "8089"))
+# 127.0.0.1, not localhost: on Windows "localhost" tries IPv6 first and adds ~2 s to every request
+LLAMA_SERVER_URL = f"http://127.0.0.1:{LLAMA_SERVER_PORT}"
+GGUF_DIR = MODELS_DIR / "gguf"
+GGUF_NAMES = {
+    "Qwen3-VL-8B-Legal (Fine-Tuned)": "legal-qwen3-vl-8b",
+    "Qwen3-VL-4B-Legal (Fine-Tuned)": "legal-qwen3-vl-4b",
+    "Qwen3-VL-4B-Instruct": "qwen3-vl-4b-instruct",
+    "Qwen3-VL-8B-Instruct": "qwen3-vl-8b-instruct",
+}
+
+
+def _gguf_path(model_name: str) -> str | None:
+    """The GGUF llama-server should load for this model, or None to use the transformers path."""
+    name = GGUF_NAMES.get(model_name)
+    if not name or LOCAL_BACKEND == "transformers" or not LLAMA_SERVER_EXE.exists():
+        return None
+    gguf = GGUF_DIR / f"{name}.Q4_K_M.gguf"
+    return str(gguf) if gguf.exists() else None
+
+
+# One llama-server process at a time (an 8 GB GPU holds one model). Its pid and model are kept in a
+# state file so a Streamlit restart reuses the running server instead of starting a second one.
+_LLAMA_STATE = Path(tempfile.gettempdir()) / f"legal-rag-llama-server-{LLAMA_SERVER_PORT}.json"
+_LLAMA_LOG = Path(tempfile.gettempdir()) / f"legal-rag-llama-server-{LLAMA_SERVER_PORT}.log"
+_llama_lock = threading.Lock()
+_spawned_pids = set()
+
+
+def _llama_server_healthy() -> bool:
+    try:
+        with urllib.request.urlopen(f"{LLAMA_SERVER_URL}/health", timeout=1) as resp:
+            return resp.status == 200
+    except Exception:
+        return False
+
+
+def _stop_llama_server():
+    try:
+        pid = json.loads(_LLAMA_STATE.read_text())["pid"]
+    except Exception:
+        return
+    if os.name == "nt":
+        subprocess.run(["taskkill", "/PID", str(pid), "/F"], capture_output=True)
+    else:
+        try:
+            os.kill(pid, 15)
+        except OSError:
+            pass
+    _LLAMA_STATE.unlink(missing_ok=True)
+
+
+def _ensure_llama_server(gguf: str):
+    """Start llama-server on `gguf` unless it is already serving it."""
+    with _llama_lock:
+        try:
+            state = json.loads(_LLAMA_STATE.read_text())
+        except Exception:
+            state = {}
+        if state.get("model") == gguf and _llama_server_healthy():
+            return
+        _stop_llama_server()
+        print(f"Starting llama-server with {Path(gguf).name} ...", flush=True)
+        cmd = [str(LLAMA_SERVER_EXE), "-m", gguf, "-ngl", "99", "-c", str(LLAMA_CTX), "-fa", "on", "-np", "1",
+               "--host", "127.0.0.1", "--port", str(LLAMA_SERVER_PORT)]
+        env = dict(os.environ)
+        if os.name != "nt":  # the Linux build loads its shared libraries from its own folder
+            env["LD_LIBRARY_PATH"] = f"{LLAMA_SERVER_EXE.parent}:{env.get('LD_LIBRARY_PATH', '')}"
+        proc = subprocess.Popen(cmd, stdout=open(_LLAMA_LOG, "w"), stderr=subprocess.STDOUT, env=env,
+                                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+        _LLAMA_STATE.write_text(json.dumps({"pid": proc.pid, "model": gguf}))
+        _spawned_pids.add(proc.pid)
+        deadline = time.time() + 180
+        while not _llama_server_healthy():
+            if proc.poll() is not None or time.time() > deadline:
+                _stop_llama_server()
+                tail = _LLAMA_LOG.read_text(errors="ignore")[-1500:]
+                raise RuntimeError(f"llama-server failed to start:\n{tail}")
+            time.sleep(0.25)
+
+
+def _stop_own_llama_server():
+    try:
+        if json.loads(_LLAMA_STATE.read_text())["pid"] in _spawned_pids:
+            _stop_llama_server()
+    except Exception:
+        pass
+
+
+atexit.register(_stop_own_llama_server)
 
 
 def check_hpc_server(timeout: float = 0.8) -> dict | None:
@@ -189,12 +293,12 @@ def _call_hpc_server(prompt: str, max_tokens: int = 1500, temperature: float = 0
         )
 
 
-# Default to HPC server if online, else local adapter, else base
+# Default to HPC server if online, else the 4B legal model (GGUF or adapter), else base
 DEFAULT_MODEL = os.getenv("ACTIVE_MODEL")
 if not DEFAULT_MODEL:
     if check_hpc_server() is not None:
         DEFAULT_MODEL = HPC_MODEL_NAME
-    elif (MODELS_DIR / "legal-lora-vl-4b-adapter").exists():
+    elif _gguf_path("Qwen3-VL-4B-Legal (Fine-Tuned)") or (MODELS_DIR / "legal-lora-vl-4b-adapter").exists():
         DEFAULT_MODEL = "Qwen3-VL-4B-Legal (Fine-Tuned)"
     else:
         DEFAULT_MODEL = "Qwen3-VL-4B-Instruct"
@@ -216,7 +320,9 @@ def get_available_models() -> list[str]:
 
     # Local models
     for name, p in AVAILABLE_MODELS.items():
-        if name in ADAPTER_PATHS:
+        if _gguf_path(name):
+            models.append(name)
+        elif name in ADAPTER_PATHS:
             if p.exists() and ADAPTER_PATHS[name].exists():
                 models.append(name)
         elif p.exists():
@@ -282,7 +388,10 @@ def _call_gemini_api(
 def set_active_model(model_name: str):
     """Switch active model and unload previous weights to free memory."""
     global _active_model_name, _model, _processor
-    if model_name == HPC_MODEL_NAME or model_name in GEMINI_MODELS:
+    gguf = _gguf_path(model_name)
+    if not gguf:
+        _stop_llama_server()  # free its VRAM for whatever runs next
+    if model_name == HPC_MODEL_NAME or model_name in GEMINI_MODELS or gguf:
         # If switching to HPC or Cloud API model, unload any heavy GPU/CPU local model weights to free memory!
         with _lock:
             if _model is not None:
@@ -402,7 +511,7 @@ def _load_model(model_name: str):
 def _ensure_loaded(model_name: str = None):
     global _active_model_name, _model
     target = model_name or _active_model_name or DEFAULT_MODEL
-    if target == HPC_MODEL_NAME or target in GEMINI_MODELS:
+    if target == HPC_MODEL_NAME or target in GEMINI_MODELS or _gguf_path(target):
         if _active_model_name != target:
             set_active_model(target)
         return None, None
@@ -427,13 +536,205 @@ def chat(
         model_id = GEMINI_MODELS[target_model]
         return _call_gemini_api(prompt, model_id=model_id, max_tokens=max_new_tokens, temperature=temperature)
 
+    if _gguf_path(target_model):
+        return "".join(_stream_llama_server(prompt, target_model, max_new_tokens, temperature)).strip()
+
+    model, processor, inputs, gen_kwargs = _local_generation_inputs(target_model, prompt, max_new_tokens, temperature)
+    tokenizer = getattr(processor, "tokenizer", processor)
+    stop = threading.Event()
+    with torch.no_grad():
+        output = model.generate(**inputs, **gen_kwargs,
+                                stopping_criteria=_meta_stopper(tokenizer, inputs["input_ids"].shape[1], stop))
+
+    new_tokens = output[0][inputs["input_ids"].shape[1]:]
+    return _strip_meta(processor.decode(new_tokens, skip_special_tokens=True)).strip()
+
+
+# Some training answers end with notes about how the answer was rewritten ("The length has been
+# increased by at least 2-4x..."). The fine-tuned adapters learned to append them and then loop on
+# them, so local generation stops as soon as one starts and the note is cut from the output.
+_META_COMMENTARY = re.compile(
+    r"(?:^|(?<=[.!?\n]))[ \t]*(?:"
+    r"(?:This|The) (?:improved|original|revised|refined|enhanced|rewritten) (?:answer|response|version)\b"
+    r"|The (?:answer|response) (?:is also|is structured|is now|is at least|is grounded|is concise|is formal"
+    r"|is significantly|is substantially|is consistent|has been|avoids|ensures|also|remains|ends|maintains)\b"
+    r"|This structure (?:ensures|allows)\b|This structured approach\b"
+    r"|The length of the (?:answer|response)\b|The structure is maintained\b)"
+    r"|at least 2[–-]4× the original length",
+    re.MULTILINE,
+)
+_META_MIN_POS = 200  # never cut the opening of an answer
+
+
+def _find_meta(text: str):
+    return _META_COMMENTARY.search(text, _META_MIN_POS) if len(text) > _META_MIN_POS else None
+
+
+def _strip_meta(text: str) -> str:
+    m = _find_meta(text)
+    return text[: m.start()].rstrip() if m else text
+
+
+def _meta_stopper(tokenizer, prompt_len: int, stop: threading.Event):
+    from transformers import StoppingCriteria, StoppingCriteriaList
+
+    class _StopOnMeta(StoppingCriteria):
+        def __call__(self, input_ids, scores, **kwargs):
+            if stop.is_set():
+                return True
+            new = input_ids[0][prompt_len:]
+            if len(new) > 60:  # roughly past the protected opening
+                tail = tokenizer.decode(new[-40:], skip_special_tokens=True)
+                if _META_COMMENTARY.search(tail):
+                    stop.set()
+            return stop.is_set()
+
+    return StoppingCriteriaList([_StopOnMeta()])
+
+
+def chat_stream(
+    prompt: str,
+    model_name: str = None,
+    max_new_tokens: int = 1024,
+    temperature: float = 0.0,
+):
+    """Yield the answer incrementally. Local models stream tokens, Gemini streams over SSE,
+    and the HPC server (which has no streaming endpoint) yields its full answer at once."""
+    target_model = model_name or _active_model_name or DEFAULT_MODEL
+    if target_model == HPC_MODEL_NAME:
+        yield _call_hpc_server(prompt, max_tokens=max_new_tokens, temperature=temperature)
+        return
+    if target_model in GEMINI_MODELS:
+        yield from _stream_gemini_api(prompt, model_id=GEMINI_MODELS[target_model], max_tokens=max_new_tokens, temperature=temperature)
+        return
+
+    if _gguf_path(target_model):
+        yield from _stream_llama_server(prompt, target_model, max_new_tokens, temperature)
+        return
+
+    from transformers import TextIteratorStreamer
+
+    model, processor, inputs, gen_kwargs = _local_generation_inputs(target_model, prompt, max_new_tokens, temperature)
+    tokenizer = getattr(processor, "tokenizer", processor)
+    streamer = TextIteratorStreamer(tokenizer, skip_prompt=True, skip_special_tokens=True)
+    errors = []
+    stop = threading.Event()
+    stopper = _meta_stopper(tokenizer, inputs["input_ids"].shape[1], stop)
+
+    def _run():
+        try:
+            with torch.no_grad():
+                model.generate(**inputs, **gen_kwargs, streamer=streamer, stopping_criteria=stopper)
+        except Exception as e:  # surface generation errors to the consumer instead of hanging
+            errors.append(e)
+            streamer.end()
+
+    thread = threading.Thread(target=_run, daemon=True)
+    thread.start()
+    # Hold back a short tail so a meta-commentary note can be cut before any of it is shown
+    text, sent, hold = "", 0, 160
+    for piece in streamer:
+        text += piece
+        if stop.is_set() or _find_meta(text):
+            stop.set()  # drain what is left; the note is cut below
+            continue
+        if len(text) - hold > sent:
+            yield text[sent:len(text) - hold]
+            sent = len(text) - hold
+    thread.join()
+    clean = _strip_meta(text)
+    if len(clean) > sent:
+        yield clean[sent:]
+    if errors:
+        raise errors[0]
+
+
+def _stream_llama_server(prompt: str, model_name: str, max_tokens: int, temperature: float):
+    """Stream from llama-server, cutting the training-data meta-commentary like the transformers path does."""
+    if _active_model_name != model_name:
+        set_active_model(model_name)  # unloads any transformers model
+    _ensure_llama_server(_gguf_path(model_name))
+    pieces = _llama_server_pieces(prompt, max_tokens, temperature if temperature > 0 else 0.2)
+
+    # Hold back a short tail so a meta-commentary note can be cut before any of it is shown
+    text, sent, hold = "", 0, 160
+    try:
+        for piece in pieces:
+            text += piece
+            if _find_meta(text):
+                break
+            if len(text) - hold > sent:
+                yield text[sent:len(text) - hold]
+                sent = len(text) - hold
+    finally:
+        pieces.close()  # closes the HTTP connection, which stops generation server-side
+    clean = _strip_meta(text)
+    if len(clean) > sent:
+        yield clean[sent:]
+
+
+def _llama_server_pieces(prompt: str, max_tokens: int, temperature: float):
+    req = urllib.request.Request(f"{LLAMA_SERVER_URL}/v1/chat/completions", data=json.dumps({
+        "messages": [{"role": "user", "content": prompt}],
+        "stream": True,
+        "max_tokens": max_tokens,
+        "temperature": temperature,
+        "top_p": 0.9,
+        "repeat_penalty": 1.1,
+    }).encode("utf-8"), headers={"Content-Type": "application/json"}, method="POST")
+    try:
+        with urllib.request.urlopen(req, timeout=600) as resp:
+            for raw in resp:
+                line = raw.decode("utf-8").strip()
+                if not line.startswith("data:"):
+                    continue
+                data = line[5:].strip()
+                if data == "[DONE]":
+                    return
+                for choice in json.loads(data).get("choices", []):
+                    yield choice.get("delta", {}).get("content") or ""
+    except urllib.error.HTTPError as e:
+        raise RuntimeError(f"llama-server HTTP Error {e.code}: {e.read().decode('utf-8', errors='ignore')}")
+
+
+def _stream_gemini_api(prompt: str, model_id: str, max_tokens: int = 1024, temperature: float = 0.0):
+    """Stream text chunks from Gemini's streamGenerateContent endpoint (server-sent events)."""
+    import json
+    import urllib.request
+
+    api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+    if not api_key:
+        raise ValueError("GEMINI_API_KEY (or GOOGLE_API_KEY) is not set! Please add GEMINI_API_KEY=your_key in your .env file.")
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_id}:streamGenerateContent?alt=sse&key={api_key}"
+    payload = {"contents": [{"parts": [{"text": prompt}]}], "generationConfig": {"maxOutputTokens": max_tokens, "temperature": temperature}}
+    req = urllib.request.Request(url, data=json.dumps(payload).encode("utf-8"), headers={"Content-Type": "application/json"}, method="POST")
+    try:
+        with urllib.request.urlopen(req, timeout=90) as resp:
+            for raw in resp:
+                line = raw.decode("utf-8").strip()
+                if not line.startswith("data:"):
+                    continue
+                data = json.loads(line[5:].strip())
+                for cand in data.get("candidates", []):
+                    for part in cand.get("content", {}).get("parts", []):
+                        if part.get("text"):
+                            yield part["text"]
+    except urllib.error.HTTPError as e:
+        raise RuntimeError(f"Gemini API HTTP Error {e.code}: {e.read().decode('utf-8', errors='ignore')}")
+
+
+def _local_generation_inputs(target_model: str, prompt: str, max_new_tokens: int, temperature: float):
+    """Load the local model if needed and build the chat-templated inputs and generation kwargs."""
     model, processor = _ensure_loaded(target_model)
 
     messages = [{"role": "user", "content": prompt}]
 
-    # Format using chat template, disable chain-of-thought to speed up generation
+    # Format using chat template, disable chain-of-thought to speed up generation.
+    # The tokenizer's template gives the same text for text-only prompts; calling it on a VL processor
+    # forwards enable_thinking to the processor and triggers the "processor_kwargs" warning.
+    templater = getattr(processor, "tokenizer", processor)
     try:
-        text = processor.apply_chat_template(
+        text = templater.apply_chat_template(
             messages,
             tokenize=False,
             add_generation_prompt=True,
@@ -470,11 +771,7 @@ def chat(
         # Subtle sampling (0.2) produces significantly cleaner formatting and lists than pure deterministic argmax
         gen_kwargs.update(do_sample=True, temperature=0.2, top_p=0.9)
 
-    with torch.no_grad():
-        output = model.generate(**inputs, **gen_kwargs)
-
-    new_tokens = output[0][inputs["input_ids"].shape[1]:]
-    return processor.decode(new_tokens, skip_special_tokens=True).strip()
+    return model, processor, inputs, gen_kwargs
 
 
 # Alias for compatibility across codebase

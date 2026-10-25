@@ -6,7 +6,7 @@ DOMAINS = [
         "title": "Legal",
         "icon": ":material/gavel:",
         "color": "orange",
-        "blurb": "Indian law research grounded in 99K statutory sections and 5.5M court judgment chunks, with a tool-using agent that drafts notices, opinions and reports as Word files.",
+        "blurb": "Indian law research grounded in 128K statutory sections and 5.5M court judgment chunks, with a tool-using agent that drafts notices, opinions and reports as Word files.",
         "tags": ["Bare acts", "Case law", "Document drafting"],
         "page": "app_pages/legal_chat.py",
     },
@@ -49,8 +49,8 @@ with st.container(horizontal_alignment="center"):
 st.space("medium")
 
 stats = st.columns(4)
-stats[0].metric("Indexed passages", "5.65M", border=True)
-stats[1].metric("Statutory sections", "99K", border=True)
+stats[0].metric("Indexed passages", "5.68M", border=True)
+stats[1].metric("Statutory sections", "128K", border=True)
 stats[2].metric("Fine-tuned params", "0.7%", border=True, help="RS-LoRA trains ~0.7% of the base model weights")
 stats[3].metric("Peak VRAM (8B, 4-bit)", "5.96 GB", border=True)
 

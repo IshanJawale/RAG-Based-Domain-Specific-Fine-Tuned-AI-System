@@ -25,6 +25,7 @@ from src.document_generator import (
     create_case_brief,
     generate_legal_document,
 )
+from src.legal_formats import ALL_FORMATS
 
 # Global lazy retriever reference
 _retriever = None
@@ -210,13 +211,13 @@ TOOL_DEFINITIONS = [
     },
     {
         "name": "create_legal_document",
-        "description": "Generate a formal Indian legal document in Word (.docx) format. Use this when the user asks to prepare, draft, or generate a Legal Notice, Legal Opinion, Case Brief, or Legal Assessment Report.",
+        "description": "Generate a formal Indian legal document in Word (.docx) format. Use this when the user asks to draft a notice (general, Sec 138 NI Act, Sec 80 CPC), plaint, written statement, bail or anticipatory bail application, police complaint, writ petition, consumer complaint, RTI application, affidavit, legal opinion, case brief or report. Format-specific fields are listed in src/legal_formats.py.",
         "parameters": {
             "type": "object",
             "properties": {
                 "document_type": {
                     "type": "string",
-                    "enum": ["legal_notice", "legal_opinion", "case_brief", "legal_report"],
+                    "enum": list(ALL_FORMATS),
                     "description": "The type of document to generate"
                 },
                 "title": {"type": "string", "description": "Title or subject of the document"},

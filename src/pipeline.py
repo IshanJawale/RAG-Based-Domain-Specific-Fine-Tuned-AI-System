@@ -18,7 +18,11 @@ Per query:
      If web search is unavailable or returns nothing, whatever local evidence
      exists is used instead of failing.
   3. Answer: drafting / calculation requests go to the tool-using agent;
-     everything else gets a grounded answer from the retrieved evidence.
+     everything else gets a grounded answer from the retrieved evidence, streamed.
+
+Follow-ups ("and the punishment?") are resolved against the chat history, and requests to change a
+document the assistant just drafted are routed back to the agent with that document's fields.
+The UI calls prepare_query -> stream_answer / agent_answer -> finalize; answer_query wraps all of it.
 
 Cross-encoder (ms-marco-MiniLM-L-6-v2) logits measured on this corpus:
 covered legal questions score 3-8, partially covered ones -1..3, off-topic < -2.
@@ -28,9 +32,10 @@ import re
 from typing import Callable, Optional
 
 from src.routing import classify_query
-from src.generation import generate_answer
+from src.generation import generate_answer_stream
 from src.agent import run_legal_agent, is_drafting_request, is_calculation_request
 from src import tools
+from src.legal_formats import classify_document, describe_format
 
 LOCAL_STRONG     = 3.0   # top local score at/above this -> local evidence alone is enough
 LOCAL_IRRELEVANT = -2.0  # top local score below this -> local corpus has nothing useful
@@ -82,30 +87,82 @@ def _merge_hybrid(local: list[dict], web: list[dict], k: int) -> list[dict]:
     return sorted(web[:quota] + rest, key=by_score, reverse=True)
 
 
-def answer_query(
+_FOLLOW_UP_START = re.compile(
+    r"^\s*(?:and|but|also|so|then|what about|how about|what if|in that case|same|ok(?:ay)?|now|instead|similarly)\b", re.I
+)
+_REFERS_BACK = re.compile(r"\b(?:it|this|that|they|them|those|these|its|their|such|the same|above|said|the act|the section|the case)\b", re.I)
+_REVISE_DOC = re.compile(
+    r"\b(?:change|add|update|make it|replace|remove|delete|include|edit|revise|modify|correct|fix|set|put|mention|insert|rewrite|redo|instead)\b",
+    re.I,
+)
+
+
+def contextualize(question: str, history: Optional[list[dict]]) -> dict:
+    """Resolve follow-ups against the chat history.
+
+    Returns {"search_text", "follow_up", "revise"}: search_text is what routing/retrieval use (the previous
+    question is prepended for short follow-ups like "and the punishment?"); revise holds the earlier document's
+    format and fields when the user asks to change a document the assistant just produced."""
+    out = {"search_text": question, "follow_up": False, "revise": None}
+    if not history:
+        return out
+    prev_user = next((m["content"] for m in reversed(history) if m.get("role") == "user"), None)
+    last_bot = next((m for m in reversed(history) if m.get("role") == "assistant"), None)
+
+    if last_bot and last_bot.get("document_args") and _REVISE_DOC.search(question) and not is_drafting_request(question):
+        key = last_bot["document_args"].get("document_type")
+        if key:
+            out["revise"] = {"doc_key": key, "base_args": last_bot["document_args"]}
+
+    short = len(question.split()) <= 14
+    if prev_user and short and (_FOLLOW_UP_START.search(question) or _REFERS_BACK.search(question)):
+        out["follow_up"] = True
+        out["search_text"] = f"{prev_user} {question}"
+    return out
+
+
+def prepare_query(
     question: str,
     *,
     hybrid,
     reranker,
     web_search,
-    model_name: str,
-    enable_agent: bool = True,
     top_k_retrieval: int = 20,
     top_k_rerank: int = 5,
+    history: Optional[list[dict]] = None,
     step: Optional[Callable[[str], None]] = None,
 ) -> dict:
+    """Route, retrieve and choose the evidence. Everything except generating the answer."""
     step = step or (lambda _label: None)
     tools.set_retriever(hybrid)  # agent tools reuse the already-loaded retriever
 
-    step("Analysing query intent")
-    routing = classify_query(question)
+    ctx = contextualize(question, history)
+    text = ctx["search_text"]
+
+    step("Analysing query intent" + (" (follow-up)" if ctx["follow_up"] else ""))
+    routing = classify_query(text)
     route = routing["source"]
+    if ctx["follow_up"]:
+        routing = {**routing, "reasoning": "Follow-up resolved against the previous question. " + routing["reasoning"]}
+
+    # Drafting requests get a sub-classification into a concrete document format
+    revise = ctx["revise"]
+    drafting = bool(revise) or is_drafting_request(question)
+    doc_key = revise["doc_key"] if revise else (classify_document(question) if drafting else None)
+    doc_format = describe_format(doc_key) if drafting else None
+    if drafting:
+        what = "Revising the previous" if revise else "Drafting request:"
+        routing = {**routing, "intent": "DRAFTING", "reasoning": f"{what} {doc_format['label']} ({doc_format['basis']}). " + routing["reasoning"]}
+        if route == "WEB":
+            route = "LOCAL"  # drafting is legal work: check the corpus first, web only as fallback
     k = top_k_rerank
 
     local_ranked: list[dict] = []
     if route in ("LOCAL", "BOTH") or (route == "WEB" and not web_search):
         step("Searching Acts, Supreme Court and High Court corpora")
-        search_q = retrieval_query(question)
+        search_q = retrieval_query(text)
+        if doc_format and re.search(r"\b(?:Section|Article|Order)\b", doc_format["basis"]):
+            search_q += f" {doc_format['basis']}"  # pull in the governing provisions
         candidates = hybrid.search(search_q, top_k=top_k_retrieval)
         step(f"Reranking {len(candidates)} candidates")
         local_ranked = reranker.rerank(search_q, candidates, top_k=max(k, 10)) if candidates else []
@@ -130,8 +187,8 @@ def answer_query(
     if want_web:
         if web_search:
             step("Searching the web")
-            web_hits = web_search.search(question, max_results=WEB_RESULTS)
-            web_ranked = reranker.rerank(question, web_hits, top_k=WEB_RESULTS) if web_hits else []
+            web_hits = web_search.search(text, max_results=WEB_RESULTS)
+            web_ranked = reranker.rerank(text, web_hits, top_k=WEB_RESULTS) if web_hits else []
         web_unavailable = not web_ranked
 
     # Assemble final evidence
@@ -154,25 +211,9 @@ def answer_query(
     elif mode == "none":
         reason += " No usable evidence was found."
 
-    # Answer
-    drafting = is_drafting_request(question)
-    use_agent = enable_agent and (drafting or is_calculation_request(question))
-    doc_path = doc_type = tool_used = None
-    if use_agent:
-        step("Drafting document with the legal agent" if drafting else f"Agent reasoning with {model_name}")
-        res = run_legal_agent(question, context_chunks=final[:MAX_CONTEXT], model_name=model_name)
-        answer = res["response"]
-        doc_path, doc_type, tool_used = res.get("document_path"), res.get("document_type"), res.get("tool_used")
-        if res.get("error"):
-            answer += f"\n\n> **Document generation failed:** {res['error']}"
-    else:
-        step(f"Generating answer with {model_name}")
-        answer = generate_answer(question, final[:MAX_CONTEXT], model_name=model_name, intent=routing["intent"], source=route)
-        if drafting:
-            answer += "\n\n> Enable *Agent tool calling* in the sidebar to export this as a Word document."
-
     return {
-        "content": answer,
+        "question": question,
+        "history": history or [],
         "routing": {
             "source": route,
             "intent": routing["intent"],
@@ -180,14 +221,85 @@ def answer_query(
             "mode": mode,
             "decision": reason,
             "top_local_score": top_local,
+            "document_format": doc_format,
+            "follow_up": ctx["follow_up"],
         },
-        "sources": [_source_card(c) for c in final],
+        "final": final,
+        "drafting": drafting,
+        "doc_key": doc_key,
+        "revise": revise,
+        "calculation": is_calculation_request(question),
+    }
+
+
+def needs_agent(prep: dict, enable_agent: bool) -> bool:
+    return enable_agent and (prep["drafting"] or prep["calculation"])
+
+
+def stream_answer(prep: dict, model_name: str):
+    """Yield the grounded answer as it is generated (non-agent path)."""
+    r = prep["routing"]
+    yield from generate_answer_stream(
+        prep["question"], prep["final"][:MAX_CONTEXT], model_name=model_name,
+        intent=r["intent"], source=r["source"], history=prep["history"],
+    )
+    if prep["drafting"]:
+        yield "\n\n> Enable *Agent tool calling* in the sidebar to export this as a Word document."
+
+
+def agent_answer(prep: dict, model_name: str) -> dict:
+    """Drafting / calculation through the tool-using agent. Returns the agent's result dict."""
+    revise = prep["revise"] or {}
+    res = run_legal_agent(
+        prep["question"], context_chunks=prep["final"][:MAX_CONTEXT], model_name=model_name,
+        history=prep["history"], doc_key=revise.get("doc_key") or (prep["doc_key"] if prep["drafting"] else None),
+        base_args=revise.get("base_args"),
+    )
+    if res.get("error"):
+        res["response"] += f"\n\n> **Document generation failed:** {res['error']}"
+    return res
+
+
+def finalize(prep: dict, content: str, model_name: str, agent_result: Optional[dict] = None) -> dict:
+    """The stored assistant message: answer text plus routing, sources and any generated document."""
+    agent_result = agent_result or {}
+    mode = prep["routing"]["mode"]
+    return {
+        "content": content,
+        "routing": prep["routing"],
+        "sources": [_source_card(c) for c in prep["final"]],
         "used_web": mode in ("web", "hybrid"),
-        "tool_used": tool_used,
-        "document_path": doc_path,
-        "document_type": doc_type,
+        "tool_used": agent_result.get("tool_used"),
+        "document_path": agent_result.get("document_path"),
+        "document_type": agent_result.get("document_type"),
+        "document_args": agent_result.get("document_args") if agent_result.get("document_path") else None,
         "model": model_name,
     }
+
+
+def answer_query(
+    question: str,
+    *,
+    hybrid,
+    reranker,
+    web_search,
+    model_name: str,
+    enable_agent: bool = True,
+    top_k_retrieval: int = 20,
+    top_k_rerank: int = 5,
+    history: Optional[list[dict]] = None,
+    step: Optional[Callable[[str], None]] = None,
+) -> dict:
+    """Non-streaming convenience wrapper (CLI and tests)."""
+    step = step or (lambda _label: None)
+    prep = prepare_query(question, hybrid=hybrid, reranker=reranker, web_search=web_search,
+                         top_k_retrieval=top_k_retrieval, top_k_rerank=top_k_rerank, history=history, step=step)
+    if needs_agent(prep, enable_agent):
+        step("Drafting document with the legal agent" if prep["drafting"] else f"Agent reasoning with {model_name}")
+        res = agent_answer(prep, model_name)
+        return finalize(prep, res["response"], model_name, res)
+    step(f"Generating answer with {model_name}")
+    return finalize(prep, "".join(stream_answer(prep, model_name)), model_name)
 
 
 def run_query(question, hybrid, reranker, figures=None, web_search=None, verbose=True, model_name=None) -> dict:

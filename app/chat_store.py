@@ -41,6 +41,31 @@ def make_title(question: str, limit: int = 48) -> str:
     return q if len(q) <= limit else q[: limit - 1].rstrip() + "…"
 
 
+def relative_label(ts: float) -> str:
+    """Compact timestamp for the history list: 'Today, 14:05', 'Yesterday', 'Mon 12 Oct'."""
+    t = time.localtime(ts)
+    today = time.localtime()
+    days = (time.mktime(today[:3] + (0, 0, 0) + today[6:]) - time.mktime(t[:3] + (0, 0, 0) + t[6:])) / 86400
+    if days < 1:
+        return time.strftime("Today, %H:%M", t)
+    if days < 2:
+        return "Yesterday"
+    return time.strftime("%a %d %b", t)
+
+
+def to_markdown(chat: dict) -> str:
+    """Export a chat as Markdown."""
+    lines = [f"# {chat['title']}", ""]
+    for m in chat["messages"]:
+        who = "You" if m["role"] == "user" else "Assistant"
+        lines += [f"**{who}:**", "", m["content"], ""]
+        for s in m.get("sources") or []:
+            lines.append(f"- {s['title']} ({s['section']})")
+        if m.get("sources"):
+            lines.append("")
+    return "\n".join(lines)
+
+
 def group_label(ts: float) -> str:
     age_days = (time.time() - ts) / 86400
     if age_days < 1:

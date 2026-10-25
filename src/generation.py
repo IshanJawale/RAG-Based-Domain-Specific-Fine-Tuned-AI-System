@@ -23,6 +23,23 @@ def _build_context(chunks: list[dict]) -> str:
         return "No external evidence provided."
     return "\n---\n".join(_format_chunk(i, c) for i, c in enumerate(chunks, start=1))
 
+def format_history(history: list[dict] | None, max_turns: int = 3, max_chars: int = 700) -> str:
+    """Last few exchanges as plain text for the prompt (assistant replies truncated)."""
+    if not history:
+        return ""
+    lines = []
+    for m in history[-2 * max_turns:]:
+        text = " ".join(str(m.get("content", "")).split())
+        if m.get("role") == "assistant" and len(text) > max_chars:
+            text = text[:max_chars].rsplit(" ", 1)[0] + " ..."
+        lines.append(f"{'User' if m.get('role') == 'user' else 'Assistant'}: {text}")
+    return (
+        "CONVERSATION SO FAR (use it to resolve follow-up questions such as 'what about...' or 'and the punishment?'):\n"
+        + "\n".join(lines)
+        + "\n\n"
+    )
+
+
 _LEGAL_PROMPT_TEMPLATE = """\
 You are an expert Indian Legal Assistant. Your task is to answer the user's question accurately using ONLY the provided evidence from Indian Acts, Statutes, and Supreme Court or High Court precedents.
 
@@ -38,7 +55,7 @@ IMPORTANT RULES & FORMATTING:
 5. If multiple laws or cases provide evidence, synthesize them clearly under appropriate headings.
 6. At the end of your answer, include a `### 📜 Relied Statutes & Authorities` section listing all cited sections.
 
-USER QUESTION:
+{history}USER QUESTION:
 {question}
 
 RETRIEVED LEGAL EVIDENCE:
@@ -57,7 +74,7 @@ IMPORTANT GUIDELINES:
 4. If there is a meaningful connection or intersection with Indian law or the Supreme Court (e.g., the Supreme Court motto "Yato Dharmastato Jayah"), mention it as an insightful note.
 5. NEVER say "The available legal evidence is insufficient" for general knowledge questions. Answer directly and factually.
 
-USER QUESTION:
+{history}USER QUESTION:
 {question}
 
 RELEVANT FACTUAL EVIDENCE:
@@ -66,16 +83,9 @@ RELEVANT FACTUAL EVIDENCE:
 Provide a well-structured, informative, and engaging answer:
 """
 
-def build_prompt(question: str, retrieved_chunks: list[dict], intent: str = "STATUTE", source: str = "LOCAL") -> str:
-    if intent == "GENERAL_KNOWLEDGE" or source == "WEB":
-        return _GENERAL_KNOWLEDGE_PROMPT_TEMPLATE.format(
-            question=question,
-            context=_build_context(retrieved_chunks),
-        )
-    return _LEGAL_PROMPT_TEMPLATE.format(
-        question=question,
-        context=_build_context(retrieved_chunks),
-    )
+def build_prompt(question: str, retrieved_chunks: list[dict], intent: str = "STATUTE", source: str = "LOCAL", history: list[dict] | None = None) -> str:
+    template = _GENERAL_KNOWLEDGE_PROMPT_TEMPLATE if (intent == "GENERAL_KNOWLEDGE" or source == "WEB") else _LEGAL_PROMPT_TEMPLATE
+    return template.format(question=question, context=_build_context(retrieved_chunks), history=format_history(history))
 
 # ======================================================================
 # Text-only generation
@@ -91,10 +101,28 @@ def generate_answer(
     model_name: str = None,
     intent: str = "STATUTE",
     source: str = "LOCAL",
+    history: list[dict] | None = None,
 ) -> str:
     """Generate a grounded legal or general knowledge answer from retrieved chunks using the selected model."""
-    prompt = build_prompt(question, retrieved_chunks, intent=intent, source=source)
+    prompt = build_prompt(question, retrieved_chunks, intent=intent, source=source, history=history)
     try:
         return _generate_text_qwen(prompt, model_name=model_name)
     except Exception as e:
         return f"[Generation error] {e}"
+
+
+def generate_answer_stream(
+    question: str,
+    retrieved_chunks: list[dict],
+    model_name: str = None,
+    intent: str = "STATUTE",
+    source: str = "LOCAL",
+    history: list[dict] | None = None,
+):
+    """Same as generate_answer, but yields text chunks as they are produced."""
+    from src.llm import chat_stream
+    prompt = build_prompt(question, retrieved_chunks, intent=intent, source=source, history=history)
+    try:
+        yield from chat_stream(prompt, model_name=model_name, max_new_tokens=1500)
+    except Exception as e:
+        yield f"\n\n[Generation error] {e}"

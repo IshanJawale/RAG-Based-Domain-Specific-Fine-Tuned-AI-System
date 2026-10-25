@@ -109,3 +109,9 @@ Thumbs.db
 desktop.ini
 $RECYCLE.BIN/
 .ipynb_checkpoints/
+tools/llama.cpp/
+models/_merged-*/
+
+# Not part of the public repo
+/Hackathon/
+/Confai/

@@ -1,5 +1,7 @@
 # 3-Way Benchmark: Qwen Base vs Fine-Tuned Legal vs Gemini 3.7 Flash
 
+> **Superseded pilot run.** This is an early evaluation on a smaller question set. The reference benchmark is the 100-question evaluation in `to_finetune/FINETUNING_INFO.md` (Section 8) and `evaluation_report.md`. Do not quote these numbers alongside it.
+
 **Evaluated on:** 25 held-out Indian Legal questions (`val.jsonl`)
 
 ## 📊 Benchmark Score Comparison Table

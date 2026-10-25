@@ -315,8 +315,14 @@ def create_legal_report(
 
 def generate_legal_document(document_type: str, **kwargs) -> dict:
     """Unified dispatcher for document generation."""
+    from src.legal_formats import FORMATS, render_format
+
     dtype = document_type.lower().strip().replace(" ", "_").replace("-", "_")
     try:
+        # Court/statutory formats (plaint, bail, writ, Sec 138 notice, ...) use the format registry
+        if dtype in FORMATS:
+            return render_format(dtype, kwargs)
+
         if "notice" in dtype:
             path = create_legal_notice(
                 title=kwargs.get("title", "Legal Notice"),

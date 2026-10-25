@@ -19,12 +19,14 @@ from pathlib import Path
 from typing import Any, Optional
 
 from src.llm import generate
+from src.generation import format_history
 from src.tools import TOOL_DEFINITIONS, execute_tool
+from src.legal_formats import ALL_FORMATS, FORMATS, classify_document, field_schema_prompt, fill_from_markdown
 
 TOOL_SYSTEM_PROMPT = """You are an Autonomous Indian Legal Agent.
 You have access to specialized legal tools:
 
-1. `create_legal_document`: Draft formal Legal Notices, Legal Opinions, Case Briefs, or Legal Assessment Reports exported directly as Word (.docx) files.
+1. `create_legal_document`: Draft formal Indian legal documents (notices, plaints, bail applications, writ petitions, consumer complaints, RTI applications, affidavits, opinions, briefs, reports) exported as Word (.docx) files.
 2. `calculate`: Calculate legal damages, interest under Section 34 CPC, limitation periods, or court fees.
 3. `search_acts`: Look up specific bare acts and statutory provisions.
 4. `search_cases`: Look up Supreme Court and High Court precedents.
@@ -33,7 +35,7 @@ You have access to specialized legal tools:
 INSTRUCTIONS FOR TOOL USAGE:
 - You must ONLY call `create_legal_document` if the user EXPLICITLY asks to draft, write, prepare, generate, create, or export a formal document, notice, legal opinion, contract, or report into a downloadable file (.docx).
 - For all conceptual, explanatory, statutory questions, legal advice, or general knowledge queries, DO NOT call `create_legal_document`. Answer directly in clear text.
-- Supported document_type values: "legal_notice", "legal_opinion", "case_brief", "legal_report".
+- Supported document_type values: "legal_notice", "cheque_bounce_notice", "section_80_cpc_notice", "plaint", "written_statement", "bail_application", "anticipatory_bail_application", "police_complaint", "writ_petition", "consumer_complaint", "rti_application", "affidavit", "legal_opinion", "case_brief", "legal_report".
 - If the user asks for a financial or mathematical calculation (e.g. interest rate under Sec 34 CPC, compensation, total claim), call `calculate`.
 - When calling a tool, return ONLY a valid JSON object in a ```json markdown block:
 ```json
@@ -75,9 +77,10 @@ If no tool is required, answer the user's question directly with clear legal str
 DRAFT_INTENT_PATTERN = re.compile(
     r"\b("
     r"(?:draft|prepare|generate|create|write|export|compose|formulate|make|compile|build|provide)\s+(?:(?:\S+\s+){0,6})?"
-    r"(?:notice|opinion|case\s+brief|brief|report|assessment|document|memo|memorandum|contract|agreement|petition|affidavit|plaint|deed|settlement|docx|word)"
+    r"(?:notice|opinion|case\s+brief|brief|report|assessment|document|memo|memorandum|contract|agreement|petition|affidavit|plaint|deed|settlement|docx|word|application|complaint|written\s+statement)"
     r"|export\s+(?:to\s+)?(?:docx|word|document|report)"
     r"|(?:legal\s+notice|legal\s+opinion|legal\s+report|assessment\s+report|case\s+brief|word\s+document|downloadable\s+report|\.docx)"
+    r"|(?:file|filing|need|want)\s+(?:an?\s+)?(?:bail\s+application|writ\s+petition|consumer\s+complaint|rti\s+application|plaint)"
     r")\b",
     re.IGNORECASE,
 )
@@ -88,7 +91,7 @@ CALC_INTENT_PATTERN = re.compile(
     re.IGNORECASE,
 )
 
-DOC_TYPES = ("legal_notice", "legal_opinion", "case_brief", "legal_report")
+DOC_TYPES = tuple(ALL_FORMATS)
 
 
 def is_drafting_request(query: str) -> bool:
@@ -100,15 +103,8 @@ def is_calculation_request(query: str) -> bool:
 
 
 def infer_document_type(query: str) -> str:
-    """Document type the user explicitly asked for (defaults to a legal report)."""
-    q = query.lower()
-    if "notice" in q:
-        return "legal_notice"
-    if "opinion" in q or "memo" in q:
-        return "legal_opinion"
-    if "case brief" in q or re.search(r"\bbrief\b", q):
-        return "case_brief"
-    return "legal_report"
+    """Document format the user asked for, e.g. 'bail_application' (defaults to a legal report)."""
+    return classify_document(query)
 
 
 def _try_repair_and_load(s: str) -> Optional[dict]:
@@ -171,7 +167,8 @@ def extract_tool_call(response_text: str) -> Optional[dict]:
     return None
 
 
-def _result(response, tool_used=None, tool_result=None, document_path=None, document_type=None, error=None) -> dict:
+def _result(response, tool_used=None, tool_result=None, document_path=None, document_type=None, error=None,
+            document_args=None) -> dict:
     return {
         "response": response,
         "tool_used": tool_used,
@@ -179,26 +176,35 @@ def _result(response, tool_used=None, tool_result=None, document_path=None, docu
         "document_path": document_path,
         "document_type": document_type,
         "error": error,
+        # Fields the document was rendered from, so the UI can show what is blank and re-render it
+        "document_args": document_args,
     }
 
 
 def _export_document(targs: dict, analysis_text: str, user_query: str, tool_label: str) -> dict:
     """Fill missing fields from the analysis, write the .docx and report success or the failure reason."""
-    targs = _enrich_doc_args_from_text(targs, analysis_text, user_query)
+    if targs.get("document_type") in FORMATS:
+        # Court/statutory formats: map the Markdown sections onto the format's fields
+        targs = fill_from_markdown(targs["document_type"], analysis_text, targs)
+    else:
+        targs = _enrich_doc_args_from_text(targs, analysis_text, user_query)
     exec_res = execute_tool("create_legal_document", targs)
     inner = exec_res.get("result") or {}
     file_path = inner.get("file_path")
     if exec_res.get("status") != "success" or inner.get("status") == "error" or not file_path:
         err = exec_res.get("message") or inner.get("message") or "the document generator returned no file"
         print(f"[Agent] Document export failed: {err}")
-        return _result(analysis_text, tool_label, exec_res, error=err)
-    return _result(analysis_text, tool_label, exec_res, file_path, inner.get("document_type"))
+        return _result(analysis_text, tool_label, exec_res, error=err, document_args=targs)
+    return _result(analysis_text, tool_label, exec_res, file_path, inner.get("document_type"), document_args=targs)
 
 
 def run_legal_agent(
     user_query: str,
     context_chunks: Optional[list[dict]] = None,
     model_name: Optional[str] = None,
+    history: Optional[list[dict]] = None,
+    doc_key: Optional[str] = None,
+    base_args: Optional[dict] = None,
 ) -> dict:
     """
     Run the legal agent workflow on a user query.
@@ -210,12 +216,23 @@ def run_legal_agent(
         "document_path": Optional[str],
         "document_type": Optional[str],
         "error": Optional[str] (set when a requested document could not be produced),
+        "document_args": Optional[dict] (fields the document was rendered from),
       }
+
+    doc_key / base_args: revise an earlier document (e.g. "change the amount to Rs 5 lakh"): the format
+    is fixed to doc_key and the earlier fields are given to the model to update.
     """
-    is_drafting = is_drafting_request(user_query)
-    requested_type = infer_document_type(user_query)
+    is_drafting = bool(doc_key) or is_drafting_request(user_query)
+    requested_type = doc_key or infer_document_type(user_query)
 
     prompt = f"{TOOL_SYSTEM_PROMPT}\n\n"
+    prompt += format_history(history)
+    if base_args:
+        prompt += (
+            "EARLIER DRAFT: the user is revising this document. Its current fields are below; apply the requested "
+            "change, keep every other field as it is, and return the full updated JSON.\n"
+            f"{json.dumps(base_args, ensure_ascii=False, indent=1)[:4000]}\n\n"
+        )
     if context_chunks:
         has_web = any(c.get("retrieval_type") == "web" for c in context_chunks)
         ev_title = "RELEVANT FACTUAL / WEB EVIDENCE" if has_web else "CONTEXT EVIDENCE FROM INDIAN LEGAL REPOSITORY"
@@ -233,6 +250,9 @@ def run_legal_agent(
             "You MUST invoke the `create_legal_document` tool with a complete, structured JSON schema in a ```json code block. "
             f"Set 'document_type' to '{requested_type}'. Do not output only plain text.\n"
         )
+        schema = field_schema_prompt(requested_type)
+        if schema:
+            prompt += f"{schema}\nUse \"[●]\" for any name, date, address or amount the user has not given; never invent them.\n"
     else:
         prompt += (
             "INSTRUCTION: Answer the user's question directly with clear structure and authoritative explanation. "
@@ -249,11 +269,11 @@ def run_legal_agent(
     # --- Document requests -------------------------------------------------
     if is_drafting:
         if is_doc_tool and isinstance(targs, dict):
-            targs = dict(targs)
+            targs = {**(base_args or {}), **targs}  # revisions keep every field the model did not change
             # The user's explicit wording wins over the model's choice of template
             if requested_type != "legal_report" or targs.get("document_type") not in DOC_TYPES:
                 targs["document_type"] = requested_type
-            doc_label = targs["document_type"].replace("_", " ").title()
+            doc_label = ALL_FORMATS.get(targs["document_type"], {}).get("label", "Legal Document")
             summary_prompt = (
                 f"User Request: {user_query}\n\n"
                 f"Structured Case Parameters:\n{json.dumps(targs, indent=2)}\n\n"
@@ -271,12 +291,12 @@ def run_legal_agent(
         draft_text = raw_response
         if tool_call or not raw_response.strip():
             draft_text = generate(
-                f"User Request: {user_query}\n\nWrite the complete {requested_type.replace('_', ' ')} in Markdown with "
-                "headings for the facts, applicable statutory provisions, legal analysis, claims or recommendations, "
-                "and conclusion. Output the document text only.",
+                f"User Request: {user_query}\n\nWrite the complete {ALL_FORMATS[requested_type]['label']} in Markdown, "
+                f"with one heading per section: {_section_headings(requested_type)}. "
+                "Use [●] for any name, date, address or amount not given. Output the document text only.",
                 model_name=model_name, max_new_tokens=1200, temperature=0.2,
             )
-        return _export_document({"document_type": requested_type}, draft_text, user_query, "create_legal_document (Auto-Compiled)")
+        return _export_document({**(base_args or {}), "document_type": requested_type}, draft_text, user_query, "create_legal_document (Auto-Compiled)")
 
     # --- Non-document requests ----------------------------------------------
     if tool_call and tname:
@@ -315,6 +335,14 @@ def run_legal_agent(
         return _result(final_text, tname, exec_res)
 
     return _result(raw_response)
+
+
+def _section_headings(key: str) -> str:
+    spec = FORMATS.get(key)
+    if not spec:
+        return "Facts, Applicable statutory provisions, Legal analysis, Claims or recommendations, Conclusion"
+    skip = {"place", "court_name", "case_number"}
+    return ", ".join(f.replace("_", " ").capitalize() for f in spec["fields"] if f not in skip)
 
 
 def _enrich_doc_args_from_text(targs: dict, analysis_text: str, user_query: str) -> dict:
