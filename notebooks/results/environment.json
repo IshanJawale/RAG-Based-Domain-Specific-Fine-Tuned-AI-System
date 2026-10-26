@@ -1,0 +1,31 @@
+{
+  "run_started": "2026-10-26 16:02:17",
+  "quick": false,
+  "seed": 42,
+  "models": {
+    "Qwen3-VL-4B-Instruct": {
+      "gguf": "qwen3-vl-4b-instruct.Q4_K_M.gguf",
+      "size_gb": 2.5
+    },
+    "Qwen3-VL-4B-Legal (Fine-Tuned)": {
+      "gguf": "legal-qwen3-vl-4b.Q4_K_M.gguf",
+      "size_gb": 2.5
+    },
+    "Qwen3-VL-8B-Instruct": {
+      "gguf": "qwen3-vl-8b-instruct.Q4_K_M.gguf",
+      "size_gb": 5.03
+    },
+    "Qwen3-VL-8B-Legal (Fine-Tuned)": {
+      "gguf": "legal-qwen3-vl-8b.Q4_K_M.gguf",
+      "size_gb": 5.03
+    }
+  },
+  "llama_server": "version: 0.7.0-dev (build 11836, commit f5027fb21)",
+  "context_window": 8192,
+  "gpu": "NVIDIA GeForce RTX 5060 Laptop GPU",
+  "nvidia_driver": "616.92, 8151 MiB",
+  "python": "3.12.10",
+  "torch": "2.14.1+cu132",
+  "os": "Windows-11-10.0.26300-SP0",
+  "git_commit": "e6373d2"
+}

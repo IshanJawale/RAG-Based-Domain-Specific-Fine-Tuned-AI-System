@@ -23,16 +23,16 @@ from src.retrieval  import HybridRetriever
 from src.reranking  import Reranker
 from src.web_search import TavilySearcher
 from src.pipeline    import run_query
-from src.llm        import get_available_models
+from src.llm        import DEFAULT_MODEL, get_available_models
 
 def main():
     parser = argparse.ArgumentParser(description="Indian Legal AI — RAG Assistant CLI")
     parser.add_argument("query", nargs="?", default=None, help="Legal question to ask")
     parser.add_argument(
         "--model",
-        default="Qwen3-8B",
-        choices=get_available_models() or ["Qwen3-8B"],
-        help="Local Qwen3 model to use for answer generation",
+        default=DEFAULT_MODEL,
+        choices=get_available_models(),
+        help="Model to use for answer generation",
     )
     args = parser.parse_args()
 

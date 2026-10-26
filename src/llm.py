@@ -34,7 +34,6 @@ AVAILABLE_MODELS = {
     "Qwen3-VL-8B-Legal (Fine-Tuned)": MODELS_DIR / "Qwen3-VL-8B-Instruct",
     "Qwen3-VL-4B-Legal (Fine-Tuned)": MODELS_DIR / "Qwen3-VL-4B-Instruct",
     "Qwen3-VL-4B-Instruct": MODELS_DIR / "Qwen3-VL-4B-Instruct",
-    "Qwen3-8B": MODELS_DIR / "Qwen3-8B",
     "Qwen3-VL-8B-Instruct": MODELS_DIR / "Qwen3-VL-8B-Instruct",
 }
 

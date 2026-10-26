@@ -10,7 +10,7 @@ import chat_store
 from src.pipeline import MODE_LABELS, agent_answer, finalize, needs_agent, prepare_query, stream_answer
 from src.document_generator import generate_legal_document
 from src.legal_formats import BLANK, FORMATS, missing_fields, read_docx_preview
-from src.llm import get_available_models, check_hpc_server, HPC_MODEL_NAME
+from src.llm import get_available_models, check_hpc_server, DEFAULT_MODEL, HPC_MODEL_NAME
 from src.retrieval import HybridRetriever
 from src.reranking import Reranker
 from src.web_search import TavilySearcher
@@ -135,7 +135,7 @@ except Exception as e:
     st.stop()
 
 hpc_status, available_models = backend_status()
-available_models = available_models or ["Qwen3-8B"]
+available_models = available_models or [DEFAULT_MODEL]
 
 # ----------------------------------------------------------------------
 # Sidebar: navigation, history, then settings
