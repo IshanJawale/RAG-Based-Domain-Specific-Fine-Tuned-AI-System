@@ -2,6 +2,10 @@
 
 **Fine-tuned Qwen3-VL, federated legal retrieval and a document-drafting agent, running on your own hardware.**
 
+**[Watch the demo on YouTube](https://youtu.be/BE-PxThAp5o)**
+
+[![Demo video](https://img.youtube.com/vi/BE-PxThAp5o/maxresdefault.jpg)](https://youtu.be/BE-PxThAp5o)
+
 A locally deployable assistant for Indian law. Ask about statutes, precedents or a practical dispute, and get an answer grounded in retrieved Acts and court judgments. Ask it to draft a document, and it exports a court-style Word file: a bail application, plaint, writ petition, Section 138 notice and more.
 
 - **Domain fine-tuning.** Qwen3-VL-4B and 8B adapted with RS-LoRA on 47.5k Indian legal instruction pairs (about 0.7% of weights trained). Served by llama.cpp as 4-bit GGUFs: about 100 tokens/s (4B) and 63 tokens/s (8B) on an 8 GB laptop GPU.
