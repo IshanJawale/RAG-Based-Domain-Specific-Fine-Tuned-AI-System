@@ -1,12 +1,50 @@
-# Indian Legal AI
+# SEVA AI: Trusted AI Help for Every Citizen
 
-**Fine-tuned Qwen3-VL, federated legal retrieval and a document-drafting agent, running on your own hardware.**
+**One private, offline platform for everyday questions on law, medicine, finance, engineering and education. Each domain has its own fine-tuned model and verified sources. Legal is live; the other domains are coming soon.**
 
 **[Watch the demo on YouTube](https://youtu.be/BE-PxThAp5o)**
 
 [![Demo video](https://img.youtube.com/vi/BE-PxThAp5o/maxresdefault.jpg)](https://youtu.be/BE-PxThAp5o)
 
-A locally deployable assistant for Indian law. Ask about statutes, precedents or a practical dispute, and get an answer grounded in retrieved Acts and court judgments. Ask it to draft a document, and it exports a court-style Word file: a bail application, plaint, writ petition, Section 138 notice and more.
+## Results at a glance
+
+- **Perplexity down 44%.** 4B: 3.84 -> 2.14. 8B: 3.63 -> 2.06.
+- **BLEU-4 up 67%, ROUGE-2 up 59%** on the 4B model, so answers use the exact wording of Indian statutes and judgments (*ad interim injunction*, *prima facie case*, *Section 138 NI Act*).
+- **Beats Gemini 3.7 Flash on text overlap.** The fine-tuned 4B scores ROUGE-2 14.85% vs 10.91% and BLEU-4 4.57 vs 2.87, and slightly edges it on citation F1 (79.94% vs 79.18%).
+- **Runs on a laptop.** As 4-bit GGUFs the fine-tuned models generate about 100 tokens/s (4B) and 63 tokens/s (8B) on an 8 GB RTX 5060 Laptop GPU, fully offline.
+- **Cheap to train.** RS-LoRA updates about 0.7% of the weights (33.5M of 4.4B; 58.7M of 8.3B). One epoch on the 4B takes 3.5 hours on a single NVIDIA RTX PRO 6000 48 GB slice.
+
+### Benchmarks
+
+100 held-out Indian legal questions with no prompt overlap with the 47.5k training pairs. Evaluated in bf16 on the Plaksha HPC (NVIDIA RTX PRO 6000, 48 GB slice).
+
+| Model | Perplexity ↓ | Eval loss ↓ | ROUGE-1 ↑ | ROUGE-2 ↑ | ROUGE-L ↑ | BLEU-4 ↑ | Citation recall ↑ | Citation F1 ↑ |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| Qwen3-VL-4B (base) | 3.84 | 1.3442 | 27.34% | 9.33% | 16.86% | 2.74 | 81.11% | 75.97% |
+| Qwen3-VL-4B, LoRA 1 epoch | 2.16 | 0.7702 | **32.08%** | **14.85%** | **21.35%** | **4.57** | 78.34% | **79.94%** |
+| Qwen3-VL-4B, LoRA 2 epochs | 2.14 | 0.7592 | 31.89% | 14.54% | 20.79% | 4.34 | 78.52% | 76.60% |
+| Qwen3-VL-4B, LoRA 4 epochs (early-stopped at 1.28) | 2.23 | 0.8011 | 31.89% | 14.57% | 20.74% | 4.42 | 78.71% | 76.95% |
+| Qwen3-VL-8B (base) | 3.63 | 1.2884 | 27.40% | 9.52% | 16.85% | 2.90 | 80.17% | 76.19% |
+| Qwen3-VL-8B, LoRA 2 epochs | **2.06** | **0.7214** | 31.33% | 13.98% | 20.54% | 4.11 | 74.51% | 74.60% |
+| Gemini 3.7 Flash (cloud API) | n/a | n/a | 28.18% | 10.91% | 17.39% | 2.87 | **85.06%** | 79.18% |
+
+Citation recall dips slightly after fine-tuning and Gemini leads on it. In the full app, citations come from the retrieved Acts and judgments rather than from the model's memory, which covers this gap.
+
+### Why this approach works
+
+- **Fine-tuning plus retrieval.** Fine-tuning teaches the model the language and reasoning style of Indian law. Retrieval over 128K statutory sections and 5.5M judgment chunks supplies the actual provisions and precedents. Each covers what the other lacks.
+- **Training choices that held up.** RS-LoRA (scale alpha/sqrt(r) = 11.3) on all seven attention and MLP projections, loss computed only on the answer tokens, cosine schedule with early stopping. The epoch ablation shows one epoch already reaches the best ROUGE-2 and BLEU-4. In the 4-epoch run, early stopping kicked in at epoch 1.28 and saved about 9.5 GPU-hours.
+- **Rigorous evaluation.** The test set is fully unseen. Models are compared against both their own base and a commercial cloud model, using perplexity, ROUGE, BLEU and a legal-citation precision/recall metric.
+- **Sovereign and private.** Training, evaluation and inference all run on hardware we control (an on-premise HPC and an ordinary laptop). Client facts never have to leave the machine, which matters for legal work.
+- **Reproducible.** Data split with a fixed seed (42), Slurm jobs that checkpoint and resume themselves across time limits, and all adapters, GGUFs, data and the index stored on Hugging Face.
+
+Full hyperparameters, formulas and training logs: [`to_finetune/FINETUNING_INFO.md`](to_finetune/FINETUNING_INFO.md).
+
+---
+
+Every domain follows the same recipe: fine-tune an open model on that domain's data, ground its answers in a library of verified documents, and run it on an ordinary laptop. The rest of this README covers the first live domain, **Legal**: fine-tuned Qwen3-VL, federated legal retrieval and a document-drafting agent, running on your own hardware.
+
+The legal domain is a locally deployable assistant for Indian law. Ask about statutes, precedents or a practical dispute, and get an answer grounded in retrieved Acts and court judgments. Ask it to draft a document, and it exports a court-style Word file: a bail application, plaint, writ petition, Section 138 notice and more.
 
 - **Domain fine-tuning.** Qwen3-VL-4B and 8B adapted with RS-LoRA on 47.5k Indian legal instruction pairs (about 0.7% of weights trained). Served by llama.cpp as 4-bit GGUFs: about 100 tokens/s (4B) and 63 tokens/s (8B) on an 8 GB laptop GPU.
 - **Federated retrieval.** LanceDB search over 128K statutory sections (3,100+ Acts), 547K Supreme Court and 5M High Court judgment chunks, reranked by a cross-encoder. The live web is added only when local evidence is weak.
