@@ -1,0 +1,109 @@
+group,id,top_score,relevant_in_top5,decision
+Statute: Act named,s01,8.218692779541016,False,local only (>= 3)
+Statute: plain language,s02,-1.9941532611846924,False,local + web
+Statute: section cited,s03,6.157187461853027,True,local only (>= 3)
+Statute: plain language,s04,5.890481948852539,True,local only (>= 3)
+Statute: Act named,s05,9.51589584350586,True,local only (>= 3)
+Statute: Act named,s06,7.371040344238281,True,local only (>= 3)
+Statute: Act named,s07,7.23274564743042,True,local only (>= 3)
+Statute: Act named,s08,6.788827896118164,False,local only (>= 3)
+Statute: plain language,s09,1.5264993906021118,False,local + web
+Statute: section cited,s10,8.00727653503418,True,local only (>= 3)
+Statute: Act named,s11,8.196269035339355,False,local only (>= 3)
+Statute: Act named,s12,4.494039535522461,False,local only (>= 3)
+Statute: Act named,s13,7.649255752563477,True,local only (>= 3)
+Statute: Act named,s14,7.7648515701293945,False,local only (>= 3)
+Statute: section cited,s15,9.691667556762695,True,local only (>= 3)
+Statute: section cited,s16,5.628234386444092,False,local only (>= 3)
+Statute: section cited,s17,8.240379333496094,False,local only (>= 3)
+Statute: Act named,s18,10.256159782409668,True,local only (>= 3)
+Statute: Act named,s19,6.801980972290039,True,local only (>= 3)
+Statute: section cited,s20,7.816189765930176,False,local only (>= 3)
+Statute: Act named,s21,5.692415237426758,False,local only (>= 3)
+Statute: section cited,s22,7.629209518432617,False,local only (>= 3)
+Statute: Act named,s23,8.220674514770508,True,local only (>= 3)
+Statute: Act named,s24,6.591092109680176,False,local only (>= 3)
+Statute: plain language,s25,6.78397274017334,True,local only (>= 3)
+Statute: plain language,s26,1.6642390489578247,False,local + web
+Statute: Act named,s27,7.370864391326904,False,local only (>= 3)
+Statute: Act named,s28,6.723112106323242,False,local only (>= 3)
+Statute: plain language,s29,4.001229286193848,True,local only (>= 3)
+Statute: Act named,s30,6.608061790466309,True,local only (>= 3)
+Statute: Act named,s31,7.436371803283691,True,local only (>= 3)
+Statute: plain language,s32,3.809495687484741,True,local only (>= 3)
+Statute: Act named,s33,6.869557857513428,True,local only (>= 3)
+Statute: Act named,s34,6.222681522369385,True,local only (>= 3)
+Statute: Act named,s35,7.998538494110107,True,local only (>= 3)
+Statute: section cited,s36,8.27436637878418,False,local only (>= 3)
+Statute: Act named,s37,8.99376392364502,False,local only (>= 3)
+Statute: Act named,s38,10.268177032470703,True,local only (>= 3)
+Statute: Act named,s39,7.274908065795898,True,local only (>= 3)
+Statute: Act named,s40,7.693887710571289,False,local only (>= 3)
+Statute: plain language,s41,2.2448835372924805,True,local + web
+Statute: plain language,s42,0.920667827129364,False,local + web
+Statute: Act named,s43,7.233478546142578,True,local only (>= 3)
+Statute: plain language,s44,7.427855491638184,True,local only (>= 3)
+Statute: Act named,s45,10.202552795410156,True,local only (>= 3)
+Statute: plain language,s46,0.3338242769241333,False,local + web
+Statute: plain language,s47,5.97885799407959,False,local only (>= 3)
+Statute: Act named,s48,7.563041687011719,False,local only (>= 3)
+Statute: Act named,s49,8.259134292602539,True,local only (>= 3)
+Statute: Act named,s50,5.54007625579834,True,local only (>= 3)
+Statute: plain language,s51,0.2711928188800812,False,local + web
+Statute: Act named,s52,9.064990997314453,True,local only (>= 3)
+Statute: Act named,s53,7.1677937507629395,True,local only (>= 3)
+Statute: Act named,s54,7.553774833679199,True,local only (>= 3)
+Statute: Act named,s55,8.538778305053711,True,local only (>= 3)
+Statute: Act named,s56,8.749687194824219,True,local only (>= 3)
+Statute: Act named,s57,7.928594589233398,True,local only (>= 3)
+Statute: Act named,s58,9.134695053100586,True,local only (>= 3)
+Statute: plain language,s59,2.2039899826049805,False,local + web
+Statute: plain language,s60,7.237594127655029,True,local only (>= 3)
+Statute: Act named,s61,9.303522109985352,False,local only (>= 3)
+Statute: Act named,s62,9.195833206176758,True,local only (>= 3)
+Statute: Act named,s63,9.545463562011719,True,local only (>= 3)
+Statute: Act named,s64,7.200557231903076,True,local only (>= 3)
+Statute: Act named,s65,6.714183807373047,True,local only (>= 3)
+Statute: Act named,s66,7.251206398010254,True,local only (>= 3)
+Statute: plain language,s67,2.9653940200805664,True,local + web
+Statute: Act named,s68,7.2787675857543945,False,local only (>= 3)
+Statute: plain language,s69,8.69277286529541,True,local only (>= 3)
+Statute: plain language,s70,3.3593814373016357,True,local only (>= 3)
+Statute: plain language,s71,1.9848830699920654,False,local + web
+Statute: plain language,s72,5.613797187805176,False,local only (>= 3)
+Statute: plain language,s73,3.7826759815216064,False,local only (>= 3)
+Case: named,p01,8.46645736694336,True,local only (>= 3)
+Case: described,p02,6.031216621398926,True,local only (>= 3)
+Case: named,p03,5.344402313232422,True,local only (>= 3)
+Case: described,p04,6.870203971862793,True,local only (>= 3)
+Case: named,p05,6.516526222229004,True,local only (>= 3)
+Case: described,p06,5.401994705200195,True,local only (>= 3)
+Case: named,p07,6.540830612182617,True,local only (>= 3)
+Case: described,p08,2.82987117767334,False,local + web
+Case: named,p09,7.010993480682373,True,local only (>= 3)
+Case: described,p10,8.181703567504883,True,local only (>= 3)
+Case: named,p11,6.08552360534668,True,local only (>= 3)
+Case: described,p12,5.9814910888671875,True,local only (>= 3)
+Case: named,p13,5.868025779724121,True,local only (>= 3)
+Case: described,p14,7.299395561218262,True,local only (>= 3)
+Case: named,p15,6.35919189453125,True,local only (>= 3)
+Case: described,p16,2.4770545959472656,True,local + web
+Case: named,p17,6.582847595214844,True,local only (>= 3)
+Case: described,p18,6.761473655700684,True,local only (>= 3)
+Advice scenarios,r15,2.05037784576416,,local + web
+Advice scenarios,r16,0.49250778555870056,,local + web
+Advice scenarios,r17,1.8473190069198608,,local + web
+Advice scenarios,r18,0.8506142497062683,,local + web
+Advice scenarios,r19,2.8369674682617188,,local + web
+Advice scenarios,r20,-0.9225718975067139,,local + web
+Advice scenarios,r21,-2.487372398376465,,web only (< -2)
+Advice scenarios,r22,1.4955236911773682,,local + web
+Non-legal questions,r27,-5.927486419677734,,web only (< -2)
+Non-legal questions,r28,-4.247471809387207,,web only (< -2)
+Non-legal questions,r29,-8.578278541564941,,web only (< -2)
+Non-legal questions,r30,-4.772635459899902,,web only (< -2)
+Non-legal questions,r31,1.1463087797164917,,local + web
+Non-legal questions,r32,-5.317625045776367,,web only (< -2)
+Non-legal questions,r33,-1.1301414966583252,,local + web
+Non-legal questions,r34,-4.219387531280518,,web only (< -2)
+Non-legal questions,r35,-7.278842926025391,,web only (< -2)

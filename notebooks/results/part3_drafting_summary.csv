@@ -1,0 +1,4 @@
+set,n,detected_pct,correct_format_pct
+paraphrase,4.0,50.0,50.0
+readme,15.0,100.0,100.0
+false positives (non-drafting questions),126.0,0.7936507936507936,

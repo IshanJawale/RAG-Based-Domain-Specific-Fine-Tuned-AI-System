@@ -1,0 +1,20 @@
+id,set,question,expected_format,detected,predicted_format,format_ok
+d01,readme,Draft a cheque bounce notice for Rs 2 lakh,cheque_bounce_notice,True,cheque_bounce_notice,True
+d02,readme,Draft a notice to the state government before filing a suit,section_80_cpc_notice,True,section_80_cpc_notice,True
+d03,readme,Draft a legal notice for breach of contract,legal_notice,True,legal_notice,True
+d04,readme,Draft a plaint for a recovery suit of Rs 15 lakh,plaint,True,plaint,True
+d05,readme,Prepare a written statement in reply to the plaint,written_statement,True,written_statement,True
+d06,readme,Draft a bail application for an accused in custody,bail_application,True,bail_application,True
+d07,readme,"Draft an anticipatory bail application, my client fears arrest",anticipatory_bail_application,True,anticipatory_bail_application,True
+d08,readme,Draft a police complaint for theft of my bike,police_complaint,True,police_complaint,True
+d09,readme,Write a writ petition challenging a transfer order,writ_petition,True,writ_petition,True
+d10,readme,Draft a consumer complaint for a defective phone,consumer_complaint,True,consumer_complaint,True
+d11,readme,Draft an RTI application for my ration card status,rti_application,True,rti_application,True
+d12,readme,Draft an affidavit for name change,affidavit,True,affidavit,True
+d13,readme,Write a legal opinion on whether the arbitration clause is valid,legal_opinion,True,legal_opinion,True
+d14,readme,Prepare a case brief of Maneka Gandhi v. Union of India,case_brief,True,case_brief,True
+d15,readme,Prepare a report on land dispute scenarios,legal_report,True,legal_report,True
+d16,paraphrase,I need a bail application for my brother who is in jail,bail_application,True,bail_application,True
+d17,paraphrase,Write up a demand letter to my former employer for my unpaid salary,legal_notice,False,,False
+d18,paraphrase,Help me file an RTI to get a copy of my exam answer sheet,rti_application,False,,False
+d19,paraphrase,Make a complaint to the consumer commission about the airline that never refunded my ticket,consumer_complaint,True,consumer_complaint,True
