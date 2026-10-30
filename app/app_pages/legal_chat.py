@@ -9,6 +9,7 @@ load_dotenv()
 import chat_store
 from src.pipeline import MODE_LABELS, agent_answer, finalize, needs_agent, prepare_query, stream_answer
 from src.document_generator import generate_legal_document
+from src.generation import tidy_markdown
 from src.legal_formats import BLANK, FORMATS, missing_fields, read_docx_preview
 from src.llm import get_available_models, check_hpc_server, DEFAULT_MODEL, HPC_MODEL_NAME
 from src.retrieval import HybridRetriever
@@ -307,7 +308,8 @@ def render_assistant_extras(msg, key_prefix, chat=None):
     if routing and show_routing:
         with st.expander("Query routing", icon=":material/route:"):
             c1, c2, c3 = st.columns(3)
-            c1.metric("Route", SOURCE_LABELS.get(routing["source"], routing["source"]))
+            c1.metric("Router plan", SOURCE_LABELS.get(routing["source"], routing["source"]),
+                      help="Where the router planned to look. 'Evidence used' is what the answer actually drew on.")
             c2.metric("Intent", INTENT_LABELS.get(routing["intent"], routing["intent"]))
             if routing.get("mode"):
                 c3.metric("Evidence used", MODE_LABELS.get(routing["mode"], routing["mode"]))
@@ -317,8 +319,13 @@ def render_assistant_extras(msg, key_prefix, chat=None):
             if routing.get("follow_up"):
                 st.caption(":material/forum: Treated as a follow-up to the previous question.")
             st.caption(f"Router: {routing['reasoning']}")
+            if routing.get("search_query"):
+                st.caption(f":material/manage_search: Searched the corpus as: *{routing['search_query']}*")
             if routing.get("decision"):
                 st.caption(f"Evidence: {routing['decision']}")
+            if routing.get("top_local_score") is not None:
+                st.caption(f"Best local match {routing['top_local_score']:.2f}  ·  local only at 3 or above, "
+                           "local + web from −2 to 3, web only below −2 (legal questions keep their closest local passages)")
 
     sources = msg.get("sources") or []
     if sources and show_sources:
@@ -350,7 +357,7 @@ def render_assistant_extras(msg, key_prefix, chat=None):
 
 def render_message(msg, key_prefix, chat=None):
     with st.chat_message(msg["role"]):
-        st.markdown(msg["content"])
+        st.markdown(tidy_markdown(msg["content"]))  # also repairs answers saved before the fix
         if msg["role"] == "assistant":
             render_assistant_extras(msg, key_prefix, chat)
 

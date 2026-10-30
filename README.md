@@ -77,6 +77,7 @@ Full design, training runs and benchmarks: [`Confai/COMPLETE_PROJECT_SPECIFICATI
 question
   -> intent router            STATUTE | PRECEDENT | GENERAL_ADVICE | CURRENT_INFORMATION | DRAFTING | ...
        -> document format     (drafting only) e.g. bail application, plaint, writ petition
+  -> query rewrite            plain-language legal questions restated in legal terms for search
   -> retrieval                LanceDB: Acts + Supreme Court + High Court (BGE-small embeddings)
   -> cross-encoder rerank     ms-marco-MiniLM-L-6-v2
   -> evidence decision        local only | hybrid (local + web) | web only
@@ -92,10 +93,16 @@ The evidence used depends on how well the legal corpus answers the question:
 | Recent developments or broad scenarios | Local + web |
 | Strong local match (top rerank score at least 3) | Local corpus only |
 | Partial local match | Relevant local passages plus web (at least 2 web passages kept) |
-| Nothing relevant locally (top score below -2) | Web only |
-| Web needed but unavailable | Best local evidence instead of failing |
+| Nothing relevant locally (top score below -2) | Web only; legal questions still keep their 2 closest local passages (score at least -4) |
+| Web needed but unavailable, or every web result off-topic (score below -5) | Best local evidence instead of failing |
 
 The thresholds were measured on this corpus: covered legal questions score 3 to 8, partial matches -1 to 3, off-topic questions below -2. The logic lives in [`src/pipeline.py`](src/pipeline.py).
+
+Three more rules keep legal answers grounded in Indian law:
+
+- **Query rewriting.** A question that cites no section, Act or case (*"I have a land dispute with my brother over family land"*) is first restated in legal terms (*"partition of joint family property between brothers, coparcenary share, Hindu Succession Act…"*) by the router's model: Gemini when a key is set, otherwise the local model. Only retrieval uses the rewrite; the answer still responds to the original question. The query routing panel shows it as *Searched the corpus as*. See [`src/query_rewrite.py`](src/query_rewrite.py).
+- **Statute sections stay in view.** Judgments that quote a section often outscore the section itself, so non-precedent legal answers keep up to 2 statute sections that score at least 0.
+- **India-focused web search.** For legal questions the web query names India, prefers Indian results and boosts Indian legal sites (Indian Kanoon, India Code, LiveLaw and others).
 
 ---
 
@@ -425,6 +432,7 @@ Reports: `to_finetune/evaluation_report/` and `eval_results_local/`.
 
 - **Acts index coverage.** 583 central Acts (Contract, IPC, Evidence, NI, Transfer of Property, Specific Relief, Limitation, Hindu Succession, PMLA, RTI, and others) were added with `src/ingest_more_acts.py` from [KanoonGPT/indian-legal-documents](https://huggingface.co/datasets/KanoonGPT/indian-legal-documents) and [civictech-India](https://github.com/civictech-India/Indian-Law-Penal-Code-Json). Still missing: the **CPC First Schedule (Orders and Rules)**, e.g. Order VII Rule 11, since only the CPC's sections are indexed. Some Acts were parsed partially (e.g. the Income-tax Act's sections are long and lettered), and a few Acts now appear under two titles (e.g. "POCSO Act, 2012" and its full title).
 - **No keyword (BM25) retrieval yet.** Retrieval is dense-only, so exact citations like "Order VII Rule 11" can rank below semantically similar text.
+- **Query rewriting costs a model call.** It adds about 3 seconds with the local 4B model, and a wrong section named in the rewrite can pull in the wrong passages (the reranker usually corrects this). The figures in `notebooks/results/` were measured before rewriting was added.
 - **Follow-up detection is heuristic.** Short questions that start with *and/what about/how about* or refer back (*it, this, the section*) are combined with the previous question; anything else is treated as a new question. Turn off *Use chat context* to disable it.
 - **Drafts need review.** Document templates are a starting point; see the note under [Document formats](#document-formats).
 

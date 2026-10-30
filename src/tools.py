@@ -137,7 +137,7 @@ def web_search(query: str) -> str:
     try:
         from src.web_search import TavilySearcher
         searcher = TavilySearcher()
-        results = searcher.search(query, max_results=4)
+        results = searcher.search(query, max_results=4, india=True)
         if not results:
             return f"No web search results for '{query}'."
         output = [f"Web Search Results for '{query}':"]

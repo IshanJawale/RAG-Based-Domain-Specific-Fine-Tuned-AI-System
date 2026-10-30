@@ -1,4 +1,5 @@
 import os
+import re
 from pathlib import Path
 
 # ======================================================================
@@ -23,20 +24,26 @@ def _build_context(chunks: list[dict]) -> str:
         return "No external evidence provided."
     return "\n---\n".join(_format_chunk(i, c) for i, c in enumerate(chunks, start=1))
 
-def format_history(history: list[dict] | None, max_turns: int = 3, max_chars: int = 700) -> str:
-    """Last few exchanges as plain text for the prompt (assistant replies truncated)."""
+_MD_MARKUP = re.compile(r"^\s*#{1,6}\s*|^\s*(?:[-*+]|\d+\.)\s+|\*\*|__|`", re.MULTILINE)
+
+
+def format_history(history: list[dict] | None, max_turns: int = 3, max_chars: int = 500) -> str:
+    """Last few exchanges as plain text for the prompt (assistant replies truncated).
+
+    Markdown is stripped before the reply is flattened to one line: otherwise "### Summary\\n\\nIf you..."
+    becomes "### Summary If you...", and a model that echoes it renders a whole paragraph as a heading."""
     if not history:
         return ""
     lines = []
     for m in history[-2 * max_turns:]:
-        text = " ".join(str(m.get("content", "")).split())
+        text = " ".join(_MD_MARKUP.sub("", str(m.get("content", ""))).split())
         if m.get("role") == "assistant" and len(text) > max_chars:
             text = text[:max_chars].rsplit(" ", 1)[0] + " ..."
         lines.append(f"{'User' if m.get('role') == 'user' else 'Assistant'}: {text}")
     return (
         "CONVERSATION SO FAR (use it to resolve follow-up questions such as 'what about...' or 'and the punishment?'):\n"
         + "\n".join(lines)
-        + "\n\n"
+        + "\n\nAnswer only the latest USER QUESTION below from the evidence. Do not repeat or summarise your earlier answers.\n\n"
     )
 
 
@@ -82,6 +89,22 @@ RELEVANT FACTUAL EVIDENCE:
 
 Provide a well-structured, informative, and engaging answer:
 """
+
+_SECTION_NAMES = (r"Summary|Key Provisions|Legal Analysis|Relied Statutes (?:&|and) Authorities|Overview|Conclusion"
+                  r"|Practical Steps|Next Steps|Remedies|Procedure|Legal Position|Answer")
+_RUN_ON_HEADING = re.compile(rf"^(#{{1,6}}[ \t]*(?:\W[ \t]*)?(?:{_SECTION_NAMES}))[ \t:]+(?=\S[^\n]{{60,}})",
+                             re.MULTILINE | re.IGNORECASE)  # only a long run-on line, not "### Summary of the law"
+_MID_LINE_HEADING = re.compile(r"(?<=\S)[ \t]+(#{2,6}[ \t])")
+_INLINE_LIST_ITEM = re.compile(r"(?<=[.:])[ \t]+(\d{1,2}\.[ \t]+\*\*)")
+
+
+def tidy_markdown(text: str) -> str:
+    """Repair answers whose line breaks were lost ("### Summary If you have ... ### Key Provisions 1. **...**"),
+    which Streamlit would render as one huge heading. Well-formed markdown is left unchanged."""
+    text = _MID_LINE_HEADING.sub(r"\n\n\1", text)
+    text = _RUN_ON_HEADING.sub(r"\1\n\n", text)
+    return _INLINE_LIST_ITEM.sub(r"\n\1", text)
+
 
 def build_prompt(question: str, retrieved_chunks: list[dict], intent: str = "STATUTE", source: str = "LOCAL", history: list[dict] | None = None) -> str:
     template = _GENERAL_KNOWLEDGE_PROMPT_TEMPLATE if (intent == "GENERAL_KNOWLEDGE" or source == "WEB") else _LEGAL_PROMPT_TEMPLATE

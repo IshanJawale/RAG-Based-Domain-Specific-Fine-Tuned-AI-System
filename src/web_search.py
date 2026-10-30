@@ -19,6 +19,12 @@ load_dotenv()
 
 TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
 
+# Indian legal sources, boosted (not required) for legal questions so generic US pages stop winning
+INDIAN_LEGAL_DOMAINS = [
+    "indiankanoon.org", "indiacode.nic.in", "legislative.gov.in", "sci.gov.in", "livelaw.in",
+    "barandbench.com", "scconline.com", "lawctopus.com", "ipleaders.in", "nalsa.gov.in",
+]
+
 
 # ------------------------------------------------------------------
 # Lazy import — only fail at search time, not at import time
@@ -65,9 +71,13 @@ class TavilySearcher:
         self,
         query:       str,
         max_results: int = 5,
+        india:       bool = False,
     ) -> list[dict]:
         """
         Run a Tavily web search and return results as chunk dicts.
+
+        india=True (legal questions) adds "India" to the query if missing, prefers results
+        from India and boosts INDIAN_LEGAL_DOMAINS.
 
         Each result dict has:
           chunk_id       : "web_<i>"
@@ -84,12 +94,19 @@ class TavilySearcher:
 
         try:
 
+            extra = {}
+            if india:
+                if "india" not in query.lower():
+                    query = f"{query} India"
+                extra = dict(country="india", include_domains=INDIAN_LEGAL_DOMAINS, include_domains_mode="boost")
+
             response = self._client.search(
                 query=query,
                 max_results=max_results,
                 search_depth="basic",        # "advanced" costs more API credits
                 include_answer=False,
                 include_raw_content=False,
+                **extra,
             )
 
             results = response.get("results", [])

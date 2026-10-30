@@ -5,7 +5,8 @@ Adaptive legal RAG pipeline shared by the Streamlit app and the CLI (main.py).
 
 Per query:
   1. Route intent (src/routing.py) -> LOCAL | BOTH | WEB
-  2. Retrieve + cross-encoder rerank, then pick the evidence mode from the scores:
+  2. Plain-language legal questions are rewritten in legal terms for retrieval (src/query_rewrite.py)
+  3. Retrieve + cross-encoder rerank, then pick the evidence mode from the scores:
 
        route  | local evidence (top rerank score)   | evidence used
        -------+-------------------------------------+---------------------------------------
@@ -13,10 +14,12 @@ Per query:
        BOTH   | any                                 | hybrid: relevant local + web
        LOCAL  | strong   (>= LOCAL_STRONG)          | local only
        LOCAL  | partial  (IRRELEVANT .. STRONG)     | hybrid: relevant local + web
-       LOCAL  | none     (<  LOCAL_IRRELEVANT)      | web only
+       LOCAL  | none     (<  LOCAL_IRRELEVANT)      | web only, except legal questions, which keep their
+              |                                     | closest local passages (>= WEAK_LOCAL_MIN) next to the web
 
-     If web search is unavailable or returns nothing, whatever local evidence
-     exists is used instead of failing.
+     Web search for legal questions is India-focused, and web passages scoring below
+     WEB_MIN_SCORE are dropped. If web search is unavailable or returns nothing usable,
+     whatever local evidence exists is used instead of failing.
   3. Answer: drafting / calculation requests go to the tool-using agent;
      everything else gets a grounded answer from the retrieved evidence, streamed.
 
@@ -32,17 +35,25 @@ import re
 from typing import Callable, Optional
 
 from src.routing import classify_query
-from src.generation import generate_answer_stream
+from src.generation import generate_answer_stream, tidy_markdown
 from src.agent import run_legal_agent, is_drafting_request, is_calculation_request
 from src import tools
 from src.legal_formats import classify_document, describe_format
+from src.query_rewrite import needs_rewrite, rewrite_for_retrieval
 
 LOCAL_STRONG     = 3.0   # top local score at/above this -> local evidence alone is enough
 LOCAL_IRRELEVANT = -2.0  # top local score below this -> local corpus has nothing useful
 CHUNK_MIN_SCORE  = 0.0   # individual local chunks below this are treated as noise
+WEAK_LOCAL_MIN   = -4.0  # legal questions with nothing above CHUNK_MIN_SCORE still keep local chunks down to this
+WEAK_LOCAL_KEEP  = 2     # ... at most this many
+WEB_MIN_SCORE    = -5.0  # web passages below this are off-topic for a legal question (e.g. US self-help pages)
 WEB_RESULTS      = 5
 MIN_WEB_SLOTS    = 2     # hybrid answers always keep at least this many web passages
+MIN_LOCAL_SLOTS  = 2     # ... and legal ones at least this many local passages, when there are any
+MIN_ACT_SLOTS    = 2     # non-precedent legal answers keep up to this many statute sections scoring >= CHUNK_MIN_SCORE
 MAX_CONTEXT      = 7     # passages handed to the LLM
+
+LEGAL_INTENTS = {"STATUTE", "PRECEDENT", "GENERAL_ADVICE", "CURRENT_INFORMATION", "DRAFTING"}
 
 MODE_LABELS = {"local": "Local corpus only", "hybrid": "Hybrid (local + web)", "web": "Web only", "none": "No evidence"}
 
@@ -79,12 +90,14 @@ def retrieval_query(question: str) -> str:
     return stripped if len(stripped) >= 12 else question
 
 
-def _merge_hybrid(local: list[dict], web: list[dict], k: int) -> list[dict]:
-    """Best-scoring passages overall, but always leave room for some web evidence."""
+def _merge_hybrid(local: list[dict], web: list[dict], k: int, min_local: int = 0) -> list[dict]:
+    """Best-scoring passages overall, but always leave room for some web evidence and,
+    for legal questions, some local evidence (web snippets often outscore statute text)."""
     by_score = lambda c: c.get("rerank_score", -999.0)
-    quota = min(MIN_WEB_SLOTS, len(web), k)
-    rest = sorted(local + web[quota:], key=by_score, reverse=True)[: k - quota]
-    return sorted(web[:quota] + rest, key=by_score, reverse=True)
+    web_quota = min(MIN_WEB_SLOTS, len(web), k)
+    local_quota = min(min_local, len(local), k - web_quota)
+    rest = sorted(local[local_quota:] + web[web_quota:], key=by_score, reverse=True)[: k - web_quota - local_quota]
+    return sorted(web[:web_quota] + local[:local_quota] + rest, key=by_score, reverse=True)
 
 
 _FOLLOW_UP_START = re.compile(
@@ -156,19 +169,34 @@ def prepare_query(
         if route == "WEB":
             route = "LOCAL"  # drafting is legal work: check the corpus first, web only as fallback
     k = top_k_rerank
+    legal = route != "WEB" and routing["intent"] in LEGAL_INTENTS
 
     local_ranked: list[dict] = []
+    search_q, rewritten = text, None
     if route in ("LOCAL", "BOTH") or (route == "WEB" and not web_search):
-        step("Searching Acts, Supreme Court and High Court corpora")
         search_q = retrieval_query(text)
         if doc_format and re.search(r"\b(?:Section|Article|Order)\b", doc_format["basis"]):
             search_q += f" {doc_format['basis']}"  # pull in the governing provisions
+        elif legal and needs_rewrite(search_q):
+            step("Rewriting the question in legal terms")
+            rewritten = search_q = rewrite_for_retrieval(search_q)
+        step("Searching Acts, Supreme Court and High Court corpora")
         candidates = hybrid.search(search_q, top_k=top_k_retrieval)
         step(f"Reranking {len(candidates)} candidates")
-        local_ranked = reranker.rerank(search_q, candidates, top_k=max(k, 10)) if candidates else []
+        local_ranked = reranker.rerank(search_q, candidates, top_k=max(k, len(candidates))) if candidates else []
 
     top_local = local_ranked[0]["rerank_score"] if local_ranked else None
     relevant_local = [c for c in local_ranked if c["rerank_score"] >= CHUNK_MIN_SCORE][:k]
+    if legal and routing["intent"] != "PRECEDENT":
+        # Judgments quoting a section often outscore the section itself; keep the statute text in view
+        acts = [c for c in local_ranked if c.get("source_type") == "act" and c["rerank_score"] >= CHUNK_MIN_SCORE][:MIN_ACT_SLOTS]
+        others = [c for c in relevant_local if not any(c is a for a in acts)][: k - len(acts)]
+        relevant_local = sorted(acts + others, key=lambda c: c["rerank_score"], reverse=True)
+    weak_local = False
+    if legal and not relevant_local:
+        # A legal answer should still see the closest Indian law, next to the web results
+        relevant_local = [c for c in local_ranked if c["rerank_score"] >= WEAK_LOCAL_MIN][:WEAK_LOCAL_KEEP]
+        weak_local = bool(relevant_local)
 
     # Decide whether web evidence is wanted
     if route == "WEB":
@@ -177,6 +205,9 @@ def prepare_query(
         want_web, reason = True, "Router asked for both local jurisprudence and live web context."
     elif top_local is not None and top_local >= LOCAL_STRONG:
         want_web, reason = False, f"Strong local match (top score {top_local:.2f}): answered from the legal corpus."
+    elif weak_local:
+        want_web, reason = True, (f"Weak local match (top score {top_local:.2f}): kept the {len(relevant_local)} "
+                                  "closest local passages and added web sources.")
     elif top_local is None or top_local < LOCAL_IRRELEVANT:
         want_web, reason = True, "Nothing relevant in the legal corpus: answered from the web."
     else:
@@ -187,22 +218,25 @@ def prepare_query(
     if want_web:
         if web_search:
             step("Searching the web")
-            web_hits = web_search.search(text, max_results=WEB_RESULTS)
-            web_ranked = reranker.rerank(text, web_hits, top_k=WEB_RESULTS) if web_hits else []
+            web_q = search_q if legal else text
+            web_hits = web_search.search(web_q, max_results=WEB_RESULTS, india=legal)
+            web_ranked = reranker.rerank(web_q, web_hits, top_k=WEB_RESULTS) if web_hits else []
+            if legal:
+                web_ranked = [c for c in web_ranked if c["rerank_score"] >= WEB_MIN_SCORE]
         web_unavailable = not web_ranked
 
     # Assemble final evidence
-    drop_local = route == "WEB" or (top_local is not None and top_local < LOCAL_IRRELEVANT)
+    drop_local = route == "WEB" or (not weak_local and top_local is not None and top_local < LOCAL_IRRELEVANT)
     if web_ranked and (drop_local or not relevant_local):
         final = web_ranked[:k]
     elif web_ranked:
-        final = _merge_hybrid(relevant_local, web_ranked, k)
+        final = _merge_hybrid(relevant_local, web_ranked, k, min_local=MIN_LOCAL_SLOTS if legal else 0)
     else:
         # Local only, or web was wanted but unavailable: use the best local evidence we have
         usable = top_local is not None and top_local >= LOCAL_IRRELEVANT
         final = relevant_local or (local_ranked[: min(3, k)] if usable else [])
         if want_web and web_unavailable:
-            reason += " Web search unavailable, so falling back to the best local evidence."
+            reason += " No usable web results, so falling back to the best local evidence."
 
     kinds = {c.get("retrieval_type") == "web" for c in final}
     mode = "none" if not final else ("hybrid" if kinds == {True, False} else ("web" if True in kinds else "local"))
@@ -221,6 +255,7 @@ def prepare_query(
             "mode": mode,
             "decision": reason,
             "top_local_score": top_local,
+            "search_query": rewritten,
             "document_format": doc_format,
             "follow_up": ctx["follow_up"],
         },
@@ -265,7 +300,7 @@ def finalize(prep: dict, content: str, model_name: str, agent_result: Optional[d
     agent_result = agent_result or {}
     mode = prep["routing"]["mode"]
     return {
-        "content": content,
+        "content": tidy_markdown(content),
         "routing": prep["routing"],
         "sources": [_source_card(c) for c in prep["final"]],
         "used_web": mode in ("web", "hybrid"),
