@@ -1,5 +1,6 @@
 import os
 import re
+from datetime import date
 from pathlib import Path
 
 # ======================================================================
@@ -43,7 +44,8 @@ def format_history(history: list[dict] | None, max_turns: int = 3, max_chars: in
     return (
         "CONVERSATION SO FAR (use it to resolve follow-up questions such as 'what about...' or 'and the punishment?'):\n"
         + "\n".join(lines)
-        + "\n\nAnswer only the latest USER QUESTION below from the evidence. Do not repeat or summarise your earlier answers.\n\n"
+        + "\n\nAnswer only the latest USER QUESTION below from the evidence. Do not repeat or summarise your earlier answers, "
+        "and where an earlier answer disagrees with the evidence below, trust the evidence.\n\n"
     )
 
 
@@ -80,6 +82,8 @@ IMPORTANT GUIDELINES:
 3. If the question asks about ancient epics, literature, or mythology (e.g., the Mahabharata, Ramayana, Gita), provide accurate details regarding the narrative, main characters, themes, and all 18 Parvas (books) without repeating or inventing parva names.
 4. If there is a meaningful connection or intersection with Indian law or the Supreme Court (e.g., the Supreme Court motto "Yato Dharmastato Jayah"), mention it as an insightful note.
 5. NEVER say "The available legal evidence is insufficient" for general knowledge questions. Answer directly and factually.
+6. Today's date is {today}. The evidence below was retrieved from the live web just now, so it is more current than your training data. When it covers the question, build the answer from it, name its sources, and do not mention your training data or a knowledge cutoff. Do not add names, dates or figures that are not in the evidence.
+7. If no evidence is provided and the question is about recent events, say that live web search is off or returned nothing, so you cannot check the latest developments, then give only what you know with its date.
 
 {history}USER QUESTION:
 {question}
@@ -108,7 +112,8 @@ def tidy_markdown(text: str) -> str:
 
 def build_prompt(question: str, retrieved_chunks: list[dict], intent: str = "STATUTE", source: str = "LOCAL", history: list[dict] | None = None) -> str:
     template = _GENERAL_KNOWLEDGE_PROMPT_TEMPLATE if (intent == "GENERAL_KNOWLEDGE" or source == "WEB") else _LEGAL_PROMPT_TEMPLATE
-    return template.format(question=question, context=_build_context(retrieved_chunks), history=format_history(history))
+    return template.format(question=question, context=_build_context(retrieved_chunks), history=format_history(history),
+                           today=date.today().strftime("%d %B %Y"))
 
 # ======================================================================
 # Text-only generation

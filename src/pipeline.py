@@ -281,6 +281,9 @@ def stream_answer(prep: dict, model_name: str):
     )
     if prep["drafting"]:
         yield "\n\n> Enable *Agent tool calling* in the sidebar to export this as a Word document."
+    elif r["source"] == "WEB" and r["mode"] == "none":
+        yield ("\n\n> Live web search is off or returned nothing, so this answer comes only from the model's training data "
+               "and may be out of date. Turn on *Web search (Tavily)* in the sidebar for current information.")
 
 
 def agent_answer(prep: dict, model_name: str) -> dict:
