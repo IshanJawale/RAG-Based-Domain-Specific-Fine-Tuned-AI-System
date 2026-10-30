@@ -148,6 +148,7 @@ def prepare_query(
     """Route, retrieve and choose the evidence. Everything except generating the answer."""
     step = step or (lambda _label: None)
     tools.set_retriever(hybrid)  # agent tools reuse the already-loaded retriever
+    tools.set_web_enabled(web_search is not None)  # web_search=None (setting off) also disables the agent's web tool
 
     ctx = contextualize(question, history)
     text = ctx["search_text"]

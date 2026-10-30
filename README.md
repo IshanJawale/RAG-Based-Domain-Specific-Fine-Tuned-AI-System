@@ -235,7 +235,7 @@ Open <http://localhost:8501>. The landing page lists domains; **Legal** is live 
   - *Qwen3-VL-4B / 8B-Instruct*: the same models without fine-tuning, for comparison.
   - *Qwen3-VL-Legal (HPC Cluster)*: the fine-tuned model served from the HPC (see below).
   - *Gemini (Cloud API)*: needs `GEMINI_API_KEY`.
-- **Agent and search settings:** toggle agent tool calling (needed for `.docx` export), chat context (follow-ups), number of retrieval candidates and reranked passages, and whether to show citations and routing.
+- **Agent and search settings:** toggle web search (off keeps every answer on the local corpus, including the agent's tools), agent tool calling (needed for `.docx` export), chat context (follow-ups), number of retrieval candidates and reranked passages, and whether to show citations and routing.
 - Answers **stream** as they are generated (local and Gemini models; the HPC server returns its answer in one piece).
 - **Follow-ups** such as *"and the limitation period for it?"* are resolved against the previous question, and the last few messages are passed to the model.
 - Each answer has expandable **Query routing** (intent, document format, evidence used and why) and **Retrieved authorities** panels.
@@ -450,6 +450,6 @@ Reports: `to_finetune/evaluation_report/` and `eval_results_local/`.
 | Local answers very slow (a few tokens/s) | The app is on the transformers fallback: check that the GGUF and `tools/llama.cpp/llama-server(.exe)` exist and `LOCAL_BACKEND` is not `transformers`. |
 | CUDA out of memory | Use the 4B model, lower `LLAMA_CTX`, close other GPU apps, or switch to the HPC or Gemini backend. |
 | "HPC tunnel not connected" | Start the server on the cluster and open the SSH tunnel shown above. |
-| No web results | Set `TAVILY_API_KEY` in `.env`; the sidebar shows whether web search is enabled. |
+| No web results | Set `TAVILY_API_KEY` in `.env` and check that **Web search (Tavily)** is on under *Agent and search settings*; the toggle is greyed out when no key is set. |
 | No download button after a drafting request | Turn on **Agent tool calling** in the sidebar. |
 | Push rejected for secrets | Never hardcode keys; keep them in `.env`. GitHub push protection blocks commits containing them. |

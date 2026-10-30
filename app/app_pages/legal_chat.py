@@ -205,9 +205,15 @@ with st.sidebar:
         if not hpc_status and selected_model == HPC_MODEL_NAME:
             st.warning("HPC tunnel not connected. Run on your laptop:", icon=":material/link_off:")
             st.code("ssh -N -L 8000:cn02:8000 ishan.jawale.pg26@hpc.plaksha.edu.in", language="powershell")
-        st.caption(f"Web search: {'enabled (Tavily)' if web_search else 'disabled (no TAVILY_API_KEY)'}")
-
     with st.expander("Agent and search settings", icon=":material/tune:"):
+        use_web = st.toggle(
+            "Web search (Tavily)",
+            value=web_search is not None,
+            disabled=web_search is None,
+            help="Add live web results when the legal corpus is weak, and let the agent search the web. "
+            "Off: answers come only from the local corpus, and nothing leaves this machine for search."
+            if web_search else "Unavailable: set TAVILY_API_KEY in .env to enable web search.",
+        )
         enable_agent = st.toggle(
             "Agent tool calling",
             value=True,
@@ -439,7 +445,7 @@ if question:
                     question,
                     hybrid=hybrid,
                     reranker=reranker,
-                    web_search=web_search,
+                    web_search=web_search if use_web else None,
                     top_k_retrieval=top_k_retrieval,
                     top_k_rerank=top_k_rerank,
                     history=history,

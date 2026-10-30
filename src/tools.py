@@ -29,11 +29,17 @@ from src.legal_formats import ALL_FORMATS
 
 # Global lazy retriever reference
 _retriever = None
+_web_enabled = True
 
 def set_retriever(retriever):
     """Share an already-loaded retriever so tools don't load a second embedding model."""
     global _retriever
     _retriever = retriever
+
+def set_web_enabled(enabled: bool):
+    """Follow the app's web search setting, so the agent cannot reach the web when it is off."""
+    global _web_enabled
+    _web_enabled = enabled
 
 def _get_retriever():
     global _retriever
@@ -134,6 +140,8 @@ def calculate(expression: str) -> str:
 
 def web_search(query: str) -> str:
     """Search live web for recent legal notifications, amendments, or current news."""
+    if not _web_enabled:
+        return "Web search is turned off; answer from the local legal corpus."
     try:
         from src.web_search import TavilySearcher
         searcher = TavilySearcher()
