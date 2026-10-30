@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 import chat_store
+from mobile_access import render_phone_qr
 from src.pipeline import MODE_LABELS, agent_answer, finalize, needs_agent, prepare_query, stream_answer
 from src.document_generator import generate_legal_document
 from src.generation import tidy_markdown
@@ -175,6 +176,8 @@ with st.sidebar:
         with actions.popover("Clear all", icon=":material/delete_sweep:", type="tertiary"):
             st.write("Delete every saved legal chat?")
             st.button("Yes, delete all", on_click=clear_all, key="clear_all_confirm")
+
+    render_phone_qr()
 
     with st.expander("Legal knowledge base", icon=":material/database:"):
         st.metric("Total indexed chunks", "5,676,435")

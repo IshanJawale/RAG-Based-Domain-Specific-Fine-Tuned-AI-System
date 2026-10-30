@@ -179,6 +179,8 @@ HF_TOKEN="hf_..."             # needed to download the private Hugging Face repo
 # Optional
 # ACTIVE_MODEL="Qwen3-VL-8B-Legal (Fine-Tuned)"   # default model; otherwise HPC if reachable, else the 4B legal model
 # HPC_SERVER_URL="http://localhost:8000"          # HPC inference server (through an SSH tunnel)
+# NGROK_AUTHTOKEN="..."                           # phone access from any network (see "Using it from a phone")
+# APP_PASSWORD="..."                              # password for anyone opening the app from another device
 ```
 
 Without `TAVILY_API_KEY` the app still runs; it answers from the local corpus only. Without `GEMINI_API_KEY` the Gemini options still appear in the model list but return an error if selected, and ambiguous questions are routed with the local model instead.
@@ -242,6 +244,24 @@ Open <http://localhost:8501>. The landing page lists domains; **Legal** is live 
 - Generated documents get a download button, an in-chat **preview** (blanks highlighted, plus the drafter's checklist) and a **Fill in missing details** form that re-renders the `.docx`. You can also ask for changes in chat, e.g. *"change the cheque amount to Rs 5,00,000"*, and the agent revises the same document.
 
 The first answer with a local model, or after switching models, waits 3-5 seconds while llama-server loads it onto the GPU.
+
+### Using it from a phone
+
+The laptop stays the backend (models, index, GPU); a phone only shows the page. A few seconds after `streamlit run app/app.py` opens the browser, the terminal prints a link and a QR code. Scan it with the phone camera. The same QR code is under **Open on your phone** on the home page and in the chat sidebar, so visitors can scan it off the laptop screen. The layout adapts to phone screens: the sidebar starts closed (open it with `»`), metrics wrap and long citations wrap instead of scrolling sideways.
+
+| Setting in `.env` | Effect |
+|---|---|
+| `NGROK_AUTHTOKEN` | Opens an [ngrok](https://ngrok.com) tunnel, so the link works on any network, including mobile data. Get a free token at <https://dashboard.ngrok.com/get-started/your-authtoken>. The first time, `pyngrok` downloads the ngrok program. |
+| *(no token)* | The QR code points at the laptop's Wi-Fi address and only works for phones on the same Wi-Fi. Networks that isolate devices (many conference and campus Wi-Fis) block this; use ngrok there. |
+| `APP_PASSWORD` | Anyone opening the app from another device must enter this password first. The laptop itself (`localhost`) is never asked. Recommended with ngrok, since the link is public. |
+| `MOBILE_ACCESS=0` | No tunnel and no QR code. |
+
+Things to know:
+
+- ngrok's free plan shows a "You are about to visit" page on a visitor's first load; tap **Visit Site**.
+- Everyone shares the laptop's chat history, so phones see (and can delete) the saved chats. Clear old chats before a demo.
+- One GPU answers one question at a time, so several phones asking at once wait for each other.
+- With `--server.headless true` no browser opens, so the QR code appears after the first visit to the page.
 
 ### Command line
 

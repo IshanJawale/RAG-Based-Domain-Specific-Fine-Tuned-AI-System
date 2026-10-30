@@ -1,5 +1,7 @@
 import streamlit as st
 
+from mobile_access import render_phone_qr
+
 DOMAINS = [
     {
         "key": "legal",
@@ -48,11 +50,14 @@ with st.container(horizontal_alignment="center"):
 
 st.space("medium")
 
-stats = st.columns(4)
-stats[0].metric("Indexed passages", "5.68M", border=True)
-stats[1].metric("Statutory sections", "128K", border=True)
-stats[2].metric("Fine-tuned params", "0.7%", border=True, help="RS-LoRA trains ~0.7% of the base model weights")
-stats[3].metric("Peak VRAM (8B, 4-bit)", "5.96 GB", border=True)
+with st.container(horizontal=True):  # wraps to two-by-two or one column on narrow screens
+    st.metric("Indexed passages", "5.68M", border=True)
+    st.metric("Statutory sections", "128K", border=True)
+    st.metric("Fine-tuned params", "0.7%", border=True, help="RS-LoRA trains ~0.7% of the base model weights")
+    st.metric("Peak VRAM (8B, 4-bit)", "5.96 GB", border=True)
+
+st.space("small")
+render_phone_qr()
 
 st.space("medium")
 st.subheader("Domains")

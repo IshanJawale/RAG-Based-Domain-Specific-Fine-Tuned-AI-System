@@ -98,6 +98,7 @@ pydantic_core==2.46.5
 pydeck==0.9.3
 Pygments==2.21.0
 pymupdf==1.28.2
+pyngrok==9.1.0
 pyparsing==3.3.2
 python-dateutil==2.9.0.post0
 python-dotenv==1.2.3
@@ -106,6 +107,7 @@ python-multipart==0.0.32
 pywinpty==3.0.5
 PyYAML==6.0.3
 pyzmq==27.2.0
+qrcode==8.2
 rank-bm25==0.2.2
 referencing==0.37.0
 regex==2026.9.3
