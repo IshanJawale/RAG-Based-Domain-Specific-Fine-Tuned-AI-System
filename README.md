@@ -179,7 +179,8 @@ HF_TOKEN="hf_..."             # needed to download the private Hugging Face repo
 # Optional
 # ACTIVE_MODEL="Qwen3-VL-8B-Legal (Fine-Tuned)"   # default model; otherwise HPC if reachable, else the 4B legal model
 # HPC_SERVER_URL="http://localhost:8000"          # HPC inference server (through an SSH tunnel)
-# NGROK_AUTHTOKEN="..."                           # phone access from any network (see "Using it from a phone")
+# TUNNEL="cloudflare"                             # phone access: cloudflare | ngrok | none (see "Using it from a phone")
+# NGROK_AUTHTOKEN="..."                           # needed only for the ngrok tunnel
 # APP_PASSWORD="..."                              # password for anyone opening the app from another device
 ```
 
@@ -247,18 +248,26 @@ The first answer with a local model, or after switching models, waits 3-5 second
 
 ### Using it from a phone
 
-The laptop stays the backend (models, index, GPU); a phone only shows the page. A few seconds after `streamlit run app/app.py` opens the browser, the terminal prints a link and a QR code. Scan it with the phone camera. The same QR code is under **Open on your phone** on the home page and in the chat sidebar, so visitors can scan it off the laptop screen. The layout adapts to phone screens: the sidebar starts closed (open it with `»`), metrics wrap and long citations wrap instead of scrolling sideways.
+The laptop stays the backend (models, index, GPU); a phone only shows the page. A few seconds after `streamlit run app/app.py` opens the browser, the terminal prints a link and a QR code. Scan it with the phone camera. The same QR codes are under **Open on your phone** on the home page and in the chat sidebar (one per link), so visitors can scan them off the laptop screen. The layout adapts to phone screens: the sidebar starts closed (open it with `»`), metrics wrap and long citations wrap instead of scrolling sideways.
+
+The app tries these links in order and always offers the local ones as well:
+
+| Link | Needs | Notes |
+|---|---|---|
+| **Cloudflare quick tunnel** (recommended) | `cloudflared` installed: `winget install --id Cloudflare.cloudflared`, or the exe in `tools/cloudflared/` | Works from any network, no account, **no warning page**. Uses HTTP/2 over TCP, which campus firewalls pass more often than QUIC. |
+| **ngrok** | `NGROK_AUTHTOKEN` in `.env` ([free token](https://dashboard.ngrok.com/get-started/your-authtoken)) | The free plan shows a "You are about to visit" page; tap **Visit Site**. FortiGuard web filters (for example the Plaksha campus network) block `*.ngrok-free.app` with a "Web Filter Violation" page. |
+| **Laptop hotspot** | Windows *Settings → Network → Mobile hotspot* on; phone joins it | The phone talks to the laptop directly at `http://192.168.137.1:8501`, so no campus firewall is involved and no internet is needed. The most reliable option for a demo. |
+| **Same Wi-Fi** | Phone on the laptop's Wi-Fi | Fails on networks that isolate devices (many campus and conference Wi-Fis). |
 
 | Setting in `.env` | Effect |
 |---|---|
-| `NGROK_AUTHTOKEN` | Opens an [ngrok](https://ngrok.com) tunnel, so the link works on any network, including mobile data. Get a free token at <https://dashboard.ngrok.com/get-started/your-authtoken>. The first time, `pyngrok` downloads the ngrok program. |
-| *(no token)* | The QR code points at the laptop's Wi-Fi address and only works for phones on the same Wi-Fi. Networks that isolate devices (many conference and campus Wi-Fis) block this; use ngrok there. |
-| `APP_PASSWORD` | Anyone opening the app from another device must enter this password first. The laptop itself (`localhost`) is never asked. Recommended with ngrok, since the link is public. |
+| `TUNNEL` | `cloudflare`, `ngrok` or `none` to use only that one (default: the first that works) |
+| `APP_PASSWORD` | Anyone opening the app from another device must enter this password first. The laptop itself (`localhost`) is never asked. Recommended with a public tunnel. |
 | `MOBILE_ACCESS=0` | No tunnel and no QR code. |
 
 Things to know:
 
-- ngrok's free plan shows a "You are about to visit" page on a visitor's first load; tap **Visit Site**.
+- Python needs inbound access in Windows Firewall for the hotspot and Wi-Fi links. Allow it when Windows asks on first run.
 - Everyone shares the laptop's chat history, so phones see (and can delete) the saved chats. Clear old chats before a demo.
 - One GPU answers one question at a time, so several phones asking at once wait for each other.
 - With `--server.headless true` no browser opens, so the QR code appears after the first visit to the page.

@@ -110,6 +110,7 @@ desktop.ini
 $RECYCLE.BIN/
 .ipynb_checkpoints/
 tools/llama.cpp/
+tools/cloudflared/
 models/_merged-*/
 
 # Not part of the public repo

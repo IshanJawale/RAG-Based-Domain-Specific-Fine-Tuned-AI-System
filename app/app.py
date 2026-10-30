@@ -24,7 +24,7 @@ st.set_page_config(
     initial_sidebar_state="auto",  # open on desktop, tucked away on phones
 )
 
-mobile_access.phone_url()  # first run only: ngrok tunnel + QR code in the terminal
+mobile_access.tunnel()  # first run only: public tunnel + QR code in the terminal
 mobile_access.require_password()
 
 # Phones: less padding, smaller headings and metrics, long URLs and citations wrap instead of overflowing
